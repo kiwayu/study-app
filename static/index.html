@@ -1,2 +1,155 @@
 <!DOCTYPE html>
-<html><body><h1>Study Session</h1></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Session</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Instrument+Serif&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+  <div class="card">
+
+    <!-- ── Card header ──────────────────────────────────────── -->
+    <div class="card-header flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="segment-label" id="segment-label">Focus</span>
+        <span class="pomodoro-count" id="pomodoro-count">0 / 4</span>
+      </div>
+      <button class="btn-icon" id="settings-btn" aria-label="Open settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Timer ────────────────────────────────────────────── -->
+    <div class="timer-section flex flex-col items-center">
+      <div class="timer-ring-wrapper">
+        <svg class="timer-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="54"/>
+          <circle class="ring-progress" id="timer-ring-progress" cx="60" cy="60" r="54"
+                  stroke-dasharray="339.292" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-digits-container">
+          <span class="timer-digits" id="timer-digits">25:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Controls ─────────────────────────────────────────── -->
+    <div class="timer-controls flex items-center justify-center gap-3">
+      <button class="btn-secondary" id="stop-btn" style="display:none" aria-label="Stop session">Stop</button>
+      <button class="btn-primary" id="start-btn" aria-label="Start session">Start</button>
+      <button class="btn-secondary" id="pause-btn" style="display:none" aria-label="Pause session">Pause</button>
+    </div>
+
+    <!-- ── Task list ─────────────────────────────────────────── -->
+    <div class="task-section">
+      <div class="task-section-header flex items-center justify-between">
+        <span class="section-title">Tasks</span>
+        <button class="btn-text" id="sort-btn" aria-label="Sort tasks by pomodoros">Sort</button>
+      </div>
+      <div class="task-list" id="task-list" role="list" aria-label="Task list"></div>
+
+      <!-- Add task form -->
+      <form class="add-task-form" id="add-task-form" novalidate>
+        <input
+          type="text"
+          id="new-task-title"
+          class="input-text"
+          placeholder="New task…"
+          autocomplete="off"
+          required
+        >
+        <div class="add-task-meta flex items-center gap-2">
+          <input type="number" id="new-task-pomodoros" class="input-number" value="1" min="1" max="9" aria-label="Estimated pomodoros">
+          <select id="new-task-priority" class="input-select" aria-label="Priority">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <input type="text" id="new-task-category" class="input-text-sm" placeholder="Tag" autocomplete="off" aria-label="Category">
+          <button type="submit" class="btn-add" aria-label="Add task">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ── Settings overlay ─────────────────────────────────── -->
+    <div class="settings-overlay" id="settings-overlay" aria-hidden="true"></div>
+
+    <!-- ── Settings drawer ──────────────────────────────────── -->
+    <div class="settings-drawer" id="settings-drawer" role="dialog" aria-label="Settings" aria-modal="true">
+      <div class="settings-header flex items-center justify-between">
+        <span class="settings-title">Settings</span>
+        <button class="btn-icon" data-cancel aria-label="Close settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-body">
+        <label class="settings-field">
+          <span class="settings-label">Focus</span>
+          <div class="settings-input-row">
+            <input type="number" id="s-pomodoro" class="input-number-lg" min="1" max="60" value="25">
+            <span class="input-unit">min</span>
+          </div>
+        </label>
+        <label class="settings-field">
+          <span class="settings-label">Short Break</span>
+          <div class="settings-input-row">
+            <input type="number" id="s-short" class="input-number-lg" min="1" max="30" value="5">
+            <span class="input-unit">min</span>
+          </div>
+        </label>
+        <label class="settings-field">
+          <span class="settings-label">Long Break</span>
+          <div class="settings-input-row">
+            <input type="number" id="s-long" class="input-number-lg" min="1" max="60" value="15">
+            <span class="input-unit">min</span>
+          </div>
+        </label>
+        <label class="settings-field">
+          <span class="settings-label">Water Reminder</span>
+          <div class="settings-input-row">
+            <input type="number" id="s-water" class="input-number-lg" min="1" max="120" value="45">
+            <span class="input-unit">min</span>
+          </div>
+        </label>
+        <label class="settings-field">
+          <span class="settings-label">Stretch Reminder</span>
+          <div class="settings-input-row">
+            <input type="number" id="s-stretch" class="input-number-lg" min="1" max="120" value="60">
+            <span class="input-unit">min</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="settings-footer flex gap-3">
+        <button class="btn-secondary flex-1" data-cancel>Cancel</button>
+        <button class="btn-primary flex-1" id="settings-save">Save</button>
+      </div>
+    </div>
+
+    <!-- ── Toast container ──────────────────────────────────── -->
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  </div><!-- /.card -->
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

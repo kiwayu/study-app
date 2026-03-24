@@ -1,0 +1,79 @@
+/* ── Google Fonts are loaded in HTML <head> ── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Palette */
+  --color-bg: #09090b;
+  --color-surface: #18181b;
+  --color-border: #27272a;
+  --color-muted: #a1a1aa;
+  --color-text: #f4f4f5;
+  --color-accent: #7C9E87;
+  --color-accent-dim: #5a7a65;
+  --color-danger: #f87171;
+  --color-high: #f87171;
+  --color-medium: #fb923c;
+  --color-low: #a1a1aa;
+  --color-success-bg: #14532d33;
+  --color-info-bg: #1e3a5f33;
+
+  /* Typography */
+  --font-display: 'Instrument Serif', serif;
+  --font-ui: 'DM Sans', sans-serif;
+
+  /* Spacing */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Radii */
+  --radius-sm:  6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows */
+  --shadow-card: 0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag: 0 16px 40px rgba(0,0,0,0.5);
+
+  /* Transitions */
+  --duration-fast:   150ms;
+  --duration-normal: 300ms;
+  --duration-slow:   320ms;
+
+  /* Z-index ladder */
+  --z-base:   1;
+  --z-drawer: 10;
+  --z-toast:  20;
+}
+
+html {
+  font-family: var(--font-ui);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Kill all default outlines; replace with accent ring */
+*:focus {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }

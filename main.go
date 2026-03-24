@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-var _ = sort.Strings // reserved for Task 4
 
 //go:embed static
 var staticFiles embed.FS
@@ -170,6 +169,246 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
+// ---- CORS middleware --------------------------------------------------------
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// ---- Task handlers ----------------------------------------------------------
+
+func listTasks(w http.ResponseWriter, r *http.Request) {
+	mu.RLock()
+	tasks := make([]Task, len(store.Tasks))
+	copy(tasks, store.Tasks)
+	mu.RUnlock()
+	sort.Slice(tasks, func(i, j int) bool { return tasks[i].Order < tasks[j].Order })
+	writeJSON(w, http.StatusOK, tasks)
+}
+
+func createTask(w http.ResponseWriter, r *http.Request) {
+	var req CreateTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Title == "" {
+		writeError(w, http.StatusBadRequest, "title is required")
+		return
+	}
+	if req.EstimatedPomodoros < 1 {
+		writeError(w, http.StatusBadRequest, "estimatedPomodoros must be at least 1")
+		return
+	}
+	if req.Priority != "high" && req.Priority != "medium" && req.Priority != "low" {
+		writeError(w, http.StatusBadRequest, "priority must be high, medium, or low")
+		return
+	}
+
+	mu.Lock()
+	maxOrder := 0
+	for _, t := range store.Tasks {
+		if t.Order >= maxOrder {
+			maxOrder = t.Order + 1
+		}
+	}
+	task := Task{
+		ID:                 generateID(),
+		Title:              req.Title,
+		EstimatedPomodoros: req.EstimatedPomodoros,
+		Priority:           req.Priority,
+		Category:           req.Category,
+		Order:              maxOrder,
+	}
+	store.Tasks = append(store.Tasks, task)
+	persistState()
+	mu.Unlock()
+
+	writeJSON(w, http.StatusCreated, task)
+}
+
+func updateTask(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req UpdateTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	for i, t := range store.Tasks {
+		if t.ID != id {
+			continue
+		}
+		if req.Title != nil {
+			store.Tasks[i].Title = *req.Title
+		}
+		if req.EstimatedPomodoros != nil {
+			store.Tasks[i].EstimatedPomodoros = *req.EstimatedPomodoros
+		}
+		if req.CompletedPomodoros != nil {
+			store.Tasks[i].CompletedPomodoros = *req.CompletedPomodoros
+		}
+		if req.Priority != nil {
+			store.Tasks[i].Priority = *req.Priority
+		}
+		if req.Category != nil {
+			store.Tasks[i].Category = *req.Category
+		}
+		if req.Completed != nil {
+			store.Tasks[i].Completed = *req.Completed
+		}
+		if req.Order != nil {
+			store.Tasks[i].Order = *req.Order
+		}
+		persistState()
+		writeJSON(w, http.StatusOK, store.Tasks[i])
+		return
+	}
+	writeError(w, http.StatusNotFound, "task not found")
+}
+
+func deleteTask(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	mu.Lock()
+	defer mu.Unlock()
+	idx := -1
+	for i, t := range store.Tasks {
+		if t.ID == id {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		writeError(w, http.StatusNotFound, "task not found")
+		return
+	}
+	store.Tasks = append(store.Tasks[:idx], store.Tasks[idx+1:]...)
+	sort.Slice(store.Tasks, func(i, j int) bool { return store.Tasks[i].Order < store.Tasks[j].Order })
+	for i := range store.Tasks {
+		store.Tasks[i].Order = i
+	}
+	persistState()
+	w.WriteHeader(http.StatusNoContent)
+}
+func getSettings(w http.ResponseWriter, r *http.Request) {
+	mu.RLock()
+	s := store.Settings
+	mu.RUnlock()
+	writeJSON(w, http.StatusOK, s)
+}
+
+func putSettings(w http.ResponseWriter, r *http.Request) {
+	var s Settings
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if s.PomodoroDuration < 1 || s.ShortBreak < 1 || s.LongBreak < 1 ||
+		s.WaterInterval < 1 || s.StretchInterval < 1 {
+		writeError(w, http.StatusBadRequest, "all durations must be at least 1 minute")
+		return
+	}
+	mu.Lock()
+	store.Settings = s
+	persistState()
+	mu.Unlock()
+	writeJSON(w, http.StatusOK, s)
+}
+
+func getSession(w http.ResponseWriter, r *http.Request) {
+	mu.RLock()
+	sess := store.Session
+	mu.RUnlock()
+	writeJSON(w, http.StatusOK, sess)
+}
+
+func startSession(w http.ResponseWriter, r *http.Request) {
+	var req StartRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	now := time.Now()
+	mu.Lock()
+	// If currently running, bank elapsed time into TotalElapsed before resetting
+	if store.Session.Status == "running" && store.Session.StartedAt != nil {
+		store.Session.TotalElapsed += time.Since(*store.Session.StartedAt).Seconds()
+	}
+	store.Session.Status = "running"
+	store.Session.SegmentType = req.SegmentType
+	store.Session.SegmentIndex = req.SegmentIndex
+	store.Session.PomodoroCount = req.PomodoroCount
+	store.Session.StartedAt = &now
+	store.Session.ElapsedSeconds = 0
+	persistState()
+	sess := store.Session
+	mu.Unlock()
+	writeJSON(w, http.StatusOK, sess)
+}
+
+func pauseSession(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	if store.Session.Status == "running" && store.Session.StartedAt != nil {
+		elapsed := time.Since(*store.Session.StartedAt).Seconds()
+		store.Session.ElapsedSeconds += elapsed
+		store.Session.TotalElapsed += elapsed
+	}
+	store.Session.Status = "paused"
+	store.Session.StartedAt = nil
+	persistState()
+	sess := store.Session
+	mu.Unlock()
+	writeJSON(w, http.StatusOK, sess)
+}
+
+func stopSession(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	preserved := struct{ total, water, stretch float64 }{
+		store.Session.TotalElapsed,
+		store.Session.LastWaterAt,
+		store.Session.LastStretchAt,
+	}
+	store.Session = SessionState{
+		Status:        "idle",
+		SegmentType:   "focus",
+		TotalElapsed:  preserved.total,
+		LastWaterAt:   preserved.water,
+		LastStretchAt: preserved.stretch,
+	}
+	persistState()
+	sess := store.Session
+	mu.Unlock()
+	writeJSON(w, http.StatusOK, sess)
+}
+
+func updateTotals(w http.ResponseWriter, r *http.Request) {
+	var req TotalsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	mu.Lock()
+	store.Session.TotalElapsed = req.TotalElapsed
+	store.Session.LastWaterAt = req.LastWaterAt
+	store.Session.LastStretchAt = req.LastStretchAt
+	persistState()
+	sess := store.Session
+	mu.Unlock()
+	writeJSON(w, http.StatusOK, sess)
+}
+
 // ---- Main -------------------------------------------------------------------
 
 func main() {
@@ -178,12 +417,32 @@ func main() {
 	}
 	loadState()
 
+	mux := http.NewServeMux()
+
+	// Task routes
+	mux.HandleFunc("GET /api/tasks", listTasks)
+	mux.HandleFunc("POST /api/tasks", createTask)
+	mux.HandleFunc("PUT /api/tasks/{id}", updateTask)
+	mux.HandleFunc("DELETE /api/tasks/{id}", deleteTask)
+
+	// Settings routes
+	mux.HandleFunc("GET /api/settings", getSettings)
+	mux.HandleFunc("PUT /api/settings", putSettings)
+
+	// Session routes
+	mux.HandleFunc("GET /api/session", getSession)
+	mux.HandleFunc("POST /api/session/start", startSession)
+	mux.HandleFunc("POST /api/session/pause", pauseSession)
+	mux.HandleFunc("POST /api/session/stop", stopSession)
+	mux.HandleFunc("PUT /api/session/totals", updateTotals)
+
+	// Static files (catch-all)
 	subFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		log.Fatalf("sub static FS: %v", err)
 	}
-	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.FS(subFS)))
+
 	log.Println("Listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", corsMiddleware(mux)))
 }
