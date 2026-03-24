@@ -1,0 +1,14 @@
+# build output
+*.exe
+studysession
+
+# runtime data
+data/
+
+# editor
+.idea/
+.vscode/
+*.swp
+
+# Claude settings
+.claude/
