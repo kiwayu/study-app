@@ -140,6 +140,8 @@ func loadState() {
 	}
 }
 
+// persistState must be called with mu write-locked. Disk I/O inside the lock
+// is acceptable for this single-user localhost app (sub-ms on any local FS).
 func persistState() {
 	data, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
