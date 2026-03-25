@@ -127,6 +127,12 @@ function dismissToast(id) {
   el.addEventListener('animationend', () => el.remove(), { once: true });
 }
 
+// ── Native Windows toast ─────────────────────────────────────
+
+function notify(title, message) {
+  window.goNotify?.({ title, message })?.catch?.(() => {});
+}
+
 // ── Totals debounce ──────────────────────────────────────────
 
 let totalsTimer = null;
@@ -154,11 +160,13 @@ timer.ontick = (remainingMs, progress) => {
 
   if (currentSettings && totalElapsed - lastWaterAt >= currentSettings.waterInterval * 60) {
     showToast('Water \uD83D\uDCA7 \u2014 time to hydrate!', 'info');
+    notify('\uD83D\uDCA7 Hydrate', 'Time to drink some water');
     lastWaterAt = totalElapsed;
     scheduleTotalsUpdate(totalElapsed);
   }
   if (currentSettings && totalElapsed - lastStretchAt >= currentSettings.stretchInterval * 60) {
     showToast('Stretch \uD83E\uDDD8 \u2014 time to move!', 'info');
+    notify('\uD83E\uDDD8 Stretch', 'Time to move!');
     lastStretchAt = totalElapsed;
     scheduleTotalsUpdate(totalElapsed);
   }
@@ -180,8 +188,10 @@ timer.onsegmentend = async () => {
   // Toast notification
   if (SEGMENT_SEQUENCE[oldIdx] === 'focus') {
     showToast(`Focus complete! ${newCount} / 4 pomodoros.`, 'success');
+    notify('Focus complete! \uD83C\uDF45', `${newCount} / 4 pomodoros`);
   } else {
     showToast('Break over \u2014 back to work!', 'success');
+    notify('Break over', 'Back to work!');
   }
 
   try {

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -648,6 +649,25 @@ func main() {
 		dwmSetAttr.Call(hwnd, 35, uintptr(unsafe.Pointer(&bg)), 4)
 		// DWMWA_TEXT_COLOR = 36
 		dwmSetAttr.Call(hwnd, 36, uintptr(unsafe.Pointer(&textColor)), 4)
+		return nil
+	})
+
+	w.Bind("goNotify", func(req struct {
+		Title   string `json:"title"`
+		Message string `json:"message"`
+	}) error {
+		script := fmt.Sprintf(`
+[Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime]|Out-Null
+[Windows.Data.Xml.Dom.XmlDocument,Windows.Data.Xml.Dom.XmlDocument,ContentType=WindowsRuntime]|Out-Null
+$t=[Windows.UI.Notifications.ToastTemplateType]::ToastImageAndText02
+$x=[Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($t)
+$x.GetElementsByTagName('text')[0].AppendChild($x.CreateTextNode('%s'))|Out-Null
+$x.GetElementsByTagName('text')[1].AppendChild($x.CreateTextNode('%s'))|Out-Null
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Study Session').Show(
+  [Windows.UI.Notifications.ToastNotification]::new($x))
+`, req.Title, req.Message)
+		cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+		cmd.Start() // fire-and-forget, don't wait
 		return nil
 	})
 
