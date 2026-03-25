@@ -3,11 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -243,5 +246,45 @@ func TestUpdateTotals(t *testing.T) {
 	sess := decodeBody[SessionState](t, w.Body)
 	if sess.TotalElapsed != 3600 {
 		t.Fatalf("expected 3600, got %f", sess.TotalElapsed)
+	}
+}
+
+func TestGetCompletions(t *testing.T) {
+	resetStore()
+	// Create and complete a task
+	body := `{"title":"Done","estimatedPomodoros":1,"priority":"high"}`
+	req := httptest.NewRequest("POST", "/api/tasks", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	createTask(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("createTask status %d", w.Code)
+	}
+	var task Task
+	json.NewDecoder(w.Body).Decode(&task)
+
+	// Mark it complete
+	upd := fmt.Sprintf(`{"completed":true}`)
+	req2 := httptest.NewRequest("PUT", "/api/tasks/"+task.ID, strings.NewReader(upd))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.SetPathValue("id", task.ID)
+	w2 := httptest.NewRecorder()
+	updateTask(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("updateTask status %d", w2.Code)
+	}
+
+	// Get completions
+	req3 := httptest.NewRequest("GET", "/api/stats/completions", nil)
+	w3 := httptest.NewRecorder()
+	getCompletions(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("getCompletions status %d", w3.Code)
+	}
+	var counts map[string]int
+	json.NewDecoder(w3.Body).Decode(&counts)
+	today := time.Now().Format("2006-01-02")
+	if counts[today] != 1 {
+		t.Errorf("expected 1 completion today, got %v", counts)
 	}
 }

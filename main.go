@@ -33,8 +33,9 @@ type Task struct {
 	CompletedPomodoros int    `json:"completedPomodoros"`
 	Priority           string `json:"priority"` // "high" | "medium" | "low"
 	Category           string `json:"category"`
-	Completed          bool   `json:"completed"`
-	Order              int    `json:"order"`
+	Completed          bool       `json:"completed"`
+	CompletedAt        *time.Time `json:"completedAt,omitempty"`
+	Order              int        `json:"order"`
 	SegmentMinutes     int    `json:"segmentMinutes"`    // 0 = use global pomodoroDuration
 }
 
@@ -321,6 +322,14 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 			store.Tasks[i].Priority = *req.Priority
 		}
 		if req.Completed != nil {
+			if *req.Completed && !store.Tasks[i].Completed {
+				// Task is being marked complete — record timestamp
+				now := time.Now()
+				store.Tasks[i].CompletedAt = &now
+			} else if !*req.Completed {
+				// Task is being un-completed — clear timestamp
+				store.Tasks[i].CompletedAt = nil
+			}
 			store.Tasks[i].Completed = *req.Completed
 		}
 		if req.Order != nil {
@@ -487,6 +496,22 @@ func updateTotals(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sess)
 }
 
+func getCompletions(w http.ResponseWriter, r *http.Request) {
+	mu.RLock()
+	tasks := make([]Task, len(store.Tasks))
+	copy(tasks, store.Tasks)
+	mu.RUnlock()
+
+	counts := make(map[string]int)
+	for _, t := range tasks {
+		if t.Completed && t.CompletedAt != nil {
+			day := t.CompletedAt.Format("2006-01-02")
+			counts[day]++
+		}
+	}
+	writeJSON(w, http.StatusOK, counts)
+}
+
 // ---- Main -------------------------------------------------------------------
 
 func main() {
@@ -520,6 +545,7 @@ func main() {
 	mux.HandleFunc("POST /api/session/pause", pauseSession)
 	mux.HandleFunc("POST /api/session/stop", stopSession)
 	mux.HandleFunc("PUT /api/session/totals", updateTotals)
+	mux.HandleFunc("GET /api/stats/completions", getCompletions)
 
 	// Static files (catch-all)
 	subFS, err := fs.Sub(staticFiles, "static")

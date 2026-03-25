@@ -1,4 +1,5 @@
 import { getTasks, getSettings, getSession, startSession, pauseSession, stopSession, updateTotals } from './api.js';
+import { StatsPanel } from './stats.js';
 import { TimerEngine, SEGMENT_SEQUENCE } from './timer.js';
 import { TaskManager } from './tasks.js';
 import { SettingsManager } from './settings.js';
@@ -25,6 +26,7 @@ const pauseBtn      = $('pause-btn');
 const stopBtn       = $('stop-btn');
 const settingsBtn   = $('settings-btn');
 const sortBtn       = $('sort-btn');
+const statsBtn      = $('stats-btn');
 const addTaskForm   = $('add-task-form');
 const toastContainer = $('toast-container');
 
@@ -38,9 +40,10 @@ let _segmentTransitioning = false;
 
 // ── Modules ──────────────────────────────────────────────────
 
-const timer    = new TimerEngine();
-const tasks    = new TaskManager($('task-list'));
-const settings = new SettingsManager($('settings-drawer'), $('settings-overlay'));
+const timer      = new TimerEngine();
+const tasks      = new TaskManager($('task-list'));
+const settings   = new SettingsManager($('settings-drawer'), $('settings-overlay'));
+const statsPanel = new StatsPanel($('stats-panel'), $('stats-overlay'));
 
 // ── Timer display ────────────────────────────────────────────
 
@@ -242,6 +245,7 @@ stopBtn.addEventListener('click', async () => {
 
 settingsBtn.addEventListener('click', () => settings.open());
 sortBtn.addEventListener('click', () => tasks.sortByPomodoros());
+statsBtn?.addEventListener('click', () => statsPanel.open());
 
 // ── Add task form ────────────────────────────────────────────
 

@@ -28,3 +28,4 @@ export const startSession    = (body)   => request('POST',   '/session/start', b
 export const pauseSession    = ()       => request('POST',   '/session/pause');
 export const stopSession     = ()       => request('POST',   '/session/stop');
 export const updateTotals    = (body)   => request('PUT',    '/session/totals', body);
+export const getCompletions  = ()       => request('GET',    '/stats/completions');

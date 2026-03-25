@@ -69,6 +69,11 @@
         <div class="board-title-row">
           <span class="board-title">Tasks</span>
           <button class="btn-ghost" id="sort-btn" aria-label="Sort tasks by pomodoros">Sort</button>
+          <button class="btn-ghost" id="stats-btn" aria-label="View completion stats">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/>
+            </svg>
+          </button>
         </div>
 
         <form class="quick-add-form" id="add-task-form" novalidate>
@@ -159,6 +164,27 @@
     <div class="settings-footer">
       <button class="btn-secondary" data-cancel>Cancel</button>
       <button class="btn-primary" id="settings-save">Save</button>
+    </div>
+  </div>
+
+  <!-- ── Stats panel ───────────────────────────────────────── -->
+  <div class="settings-overlay" id="stats-overlay" aria-hidden="true"></div>
+
+  <div class="stats-panel" id="stats-panel" role="dialog" aria-label="Completion stats" aria-modal="true">
+    <div class="settings-header">
+      <span class="settings-title">Activity</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button id="stats-view-year"  class="btn-ghost btn-sm is-active">Year</button>
+        <button id="stats-view-month" class="btn-ghost btn-sm">Month</button>
+        <button class="btn-icon" data-stats-close aria-label="Close stats">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="stats-body">
+      <div id="stats-heatmap" class="stats-heatmap"></div>
     </div>
   </div>
 
