@@ -1,13 +1,38 @@
 import { createTask, updateTask, deleteTask } from './api.js';
 
+// ── Pastel colour system ──────────────────────────────────────
+// Each task is assigned a colour deterministically from its ID using
+// FNV-1a hashing, so colours are stable across renders and reloads.
+
+const PASTEL_PALETTE = [
+  { bg: 'rgba(251,113,133,0.07)', accent: '#fb7185' },  // rose
+  { bg: 'rgba(167,139,250,0.07)', accent: '#a78bfa' },  // violet
+  { bg: 'rgba(52,211,153,0.07)',  accent: '#34d399' },  // emerald
+  { bg: 'rgba(56,189,248,0.07)',  accent: '#38bdf8' },  // sky
+  { bg: 'rgba(251,191,36,0.07)',  accent: '#fbbf24' },  // amber
+  { bg: 'rgba(244,114,182,0.07)', accent: '#f472b6' },  // pink
+  { bg: 'rgba(129,140,248,0.07)', accent: '#818cf8' },  // indigo
+  { bg: 'rgba(45,212,191,0.07)',  accent: '#2dd4bf' },  // teal
+];
+
+/** FNV-1a 32-bit hash — fast, good distribution over short UUIDs. */
+function taskColor(id) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return PASTEL_PALETTE[h % PASTEL_PALETTE.length];
+}
+
 const PRIORITY_CYCLE = ['high', 'medium', 'low'];
 
 export class TaskManager {
   constructor(containerEl) {
     this._el    = containerEl;
     this._tasks = [];
-    this._dragSrcIdx    = null;
-    this._dropOccurred  = false;
+    this._dragSrcIdx   = null;
+    this._dropOccurred = false;
 
     /** @type {(tasks: object[]) => void} */
     this.onchange = null;
@@ -39,7 +64,7 @@ export class TaskManager {
     this._render();
   }
 
-  // ── Render ─────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────
 
   _render() {
     this._el.innerHTML = '';
@@ -49,6 +74,8 @@ export class TaskManager {
   }
 
   _buildCard(task, idx) {
+    const color = taskColor(task.id);
+
     const el = document.createElement('div');
     el.className = 'task-card' + (task.completed ? ' is-completed' : '');
     el.dataset.id  = task.id;
@@ -56,24 +83,24 @@ export class TaskManager {
     el.setAttribute('role', 'listitem');
     el.draggable = true;
 
+    // Pastel colour tokens consumed by CSS custom properties in components.css
+    el.style.setProperty('--card-bg',     color.bg);
+    el.style.setProperty('--card-accent', color.accent);
+
     el.innerHTML = `
-      <div class="task-drag-handle" aria-hidden="true">⠿</div>
-      <div class="task-main">
-        <div class="task-top">
-          <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
-                 aria-label="Mark complete">
-          <span class="task-title">${esc(task.title)}</span>
-        </div>
-        <div class="task-meta">
-          <span class="task-priority priority-${task.priority}">${task.priority}</span>
-          <span class="task-pomodoros">×${task.estimatedPomodoros}</span>
-          ${task.category ? `<span class="task-category">${esc(task.category)}</span>` : ''}
-        </div>
+      <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
+             aria-label="Mark complete">
+      <span class="task-title">${esc(task.title)}</span>
+      <div class="task-badges">
+        <span class="task-pomodoros">×${task.estimatedPomodoros}</span>
+        <span class="task-priority priority-${esc(task.priority)}">${esc(task.priority)}</span>
+        ${task.category ? `<span class="task-category">${esc(task.category)}</span>` : ''}
       </div>
       <button class="task-delete" aria-label="Delete task" tabindex="-1">×</button>
+      <div class="task-drag-handle" aria-hidden="true">⠿</div>
     `;
 
-    // Events
+    // ── Event listeners ────────────────────────────────────────
     el.querySelector('.task-checkbox').addEventListener('change',
       () => this._toggleComplete(task.id));
     el.querySelector('.task-title').addEventListener('click',
@@ -85,19 +112,19 @@ export class TaskManager {
     el.querySelector('.task-delete').addEventListener('click',
       () => this._deleteTask(task.id, el));
 
-    // Desktop DnD
+    // Desktop drag-and-drop
     el.addEventListener('dragstart', e => this._onDragStart(e, idx));
     el.addEventListener('dragover',  e => this._onDragOver(e));
     el.addEventListener('drop',      e => this._onDrop(e, idx));
     el.addEventListener('dragend',   e => this._onDragEnd(e));
 
-    // Mobile touch DnD
+    // Mobile touch drag-and-drop
     el.addEventListener('touchstart', e => this._onTouchStart(e, idx), { passive: false });
 
     return el;
   }
 
-  // ── Interactions ───────────────────────────────────────────
+  // ── Interactions ─────────────────────────────────────────────
 
   async _toggleComplete(id) {
     const task = this._find(id);
@@ -205,7 +232,7 @@ export class TaskManager {
     }, { once: true });
   }
 
-  // ── Desktop DnD ────────────────────────────────────────────
+  // ── Desktop drag-and-drop ────────────────────────────────────
 
   _onDragStart(e, idx) {
     this._dragSrcIdx   = idx;
@@ -217,7 +244,6 @@ export class TaskManager {
   _onDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    // Highlight only this target
     this._el.querySelectorAll('.task-card').forEach(c => c.classList.remove('is-drop-target'));
     e.currentTarget.classList.add('is-drop-target');
   }
@@ -238,21 +264,21 @@ export class TaskManager {
   _onDragEnd(e) {
     e.currentTarget.classList.remove('is-dragging');
     this._el.querySelectorAll('.task-card').forEach(c => c.classList.remove('is-drop-target'));
-    if (!this._dropOccurred) this._render(); // cancelled — restore DOM
+    if (!this._dropOccurred) this._render(); // cancelled — restore DOM order
     this._dragSrcIdx = null;
   }
 
-  // ── Mobile touch DnD ───────────────────────────────────────
+  // ── Mobile touch drag-and-drop ───────────────────────────────
 
   _onTouchStart(e, srcIdx) {
     if (e.touches.length !== 1) return;
     e.preventDefault();
 
-    const srcEl  = e.currentTarget;
-    const rect   = srcEl.getBoundingClientRect();
-    const touch  = e.touches[0];
-    const offX   = touch.clientX - rect.left;
-    const offY   = touch.clientY - rect.top;
+    const srcEl = e.currentTarget;
+    const rect  = srcEl.getBoundingClientRect();
+    const touch = e.touches[0];
+    const offX  = touch.clientX - rect.left;
+    const offY  = touch.clientY - rect.top;
 
     const ghost = srcEl.cloneNode(true);
     Object.assign(ghost.style, {
@@ -311,9 +337,10 @@ export class TaskManager {
     document.addEventListener('touchcancel', cancel);
   }
 
-  // ── Helpers ────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────
 
-  _find(id)          { return this._tasks.find(t => t.id === id) ?? null; }
+  _find(id) { return this._tasks.find(t => t.id === id) ?? null; }
+
   _replace(id, data) {
     const i = this._tasks.findIndex(t => t.id === id);
     if (i !== -1) this._tasks[i] = data;
@@ -328,10 +355,15 @@ export class TaskManager {
   }
 }
 
-// ── Utilities ───────────────────────────────────────────────
+// ── Utilities ─────────────────────────────────────────────────
 
+/** HTML-escape user-supplied strings to prevent XSS in innerHTML. */
 function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function makeSpan(cls, text) {
