@@ -237,6 +237,7 @@ addTaskForm.addEventListener('submit', async e => {
   const pomEl      = addTaskForm.querySelector('#new-task-pomodoros');
   const priEl      = addTaskForm.querySelector('#new-task-priority');
   const catEl      = addTaskForm.querySelector('#new-task-category');
+  const segEl      = addTaskForm.querySelector('#new-task-segment');
 
   const title = titleEl.value.trim();
   if (!title) return;
@@ -246,12 +247,14 @@ addTaskForm.addEventListener('submit', async e => {
     estimatedPomodoros: Math.max(1, parseInt(pomEl.value, 10) || 1),
     priority: priEl.value,
     category: catEl.value.trim(),
+    segmentMinutes: parseInt(segEl?.value, 10) || 0,
   });
 
   if (data) {
     addTaskForm.reset();
     priEl.value = 'medium';
     pomEl.value = '1';
+    if (segEl) segEl.value = '';
     titleEl.focus();
     showToast('Task added', 'success');
   } else {
@@ -264,6 +267,7 @@ addTaskForm.addEventListener('submit', async e => {
 settings.onsave = s => {
   currentSettings = s;
   timer.updateDurations(s);
+  tasks.updateSettings(s);
   showToast('Settings saved', 'success');
 };
 
@@ -282,7 +286,7 @@ async function init() {
     settings.init(settingsRes.data);
   }
 
-  if (tasksRes.data) tasks.init(tasksRes.data);
+  if (tasksRes.data) tasks.init(tasksRes.data, currentSettings);
 
   if (sessionRes.data) {
     currentSession = sessionRes.data;

@@ -33,13 +33,20 @@ export class TaskManager {
     this._tasks = [];
     this._dragSrcIdx   = null;
     this._dropOccurred = false;
+    this._settings = null;
 
     /** @type {(tasks: object[]) => void} */
     this.onchange = null;
   }
 
-  init(tasks) {
+  init(tasks, settings = null) {
+    this._settings = settings;
     this._tasks = [...tasks].sort((a, b) => a.order - b.order);
+    this._render();
+  }
+
+  updateSettings(settings) {
+    this._settings = settings;
     this._render();
   }
 
@@ -75,6 +82,8 @@ export class TaskManager {
 
   _buildCard(task, idx) {
     const color = taskColor(task.id);
+    const segMin = task.segmentMinutes || (this._settings?.pomodoroDuration ?? 25);
+    const totalMin = task.estimatedPomodoros * segMin;
 
     const el = document.createElement('div');
     el.className = 'task-card' + (task.completed ? ' is-completed' : '');
@@ -83,21 +92,42 @@ export class TaskManager {
     el.setAttribute('role', 'listitem');
     el.draggable = true;
 
-    // Pastel colour tokens consumed by CSS custom properties in components.css
     el.style.setProperty('--card-bg',     color.bg);
     el.style.setProperty('--card-accent', color.accent);
 
+    // Height scales with segment count: base 52px + 26px per additional segment
+    const minH = 52 + Math.max(0, task.estimatedPomodoros - 1) * 26;
+    el.style.minHeight = `${minH}px`;
+
+    // Build segment chips (only show when more than 1 segment)
+    let segsHtml = '';
+    if (task.estimatedPomodoros > 1) {
+      let chips = '';
+      for (let i = 0; i < task.estimatedPomodoros; i++) {
+        const done = i < (task.completedPomodoros ?? 0);
+        chips += `<span class="task-seg${done ? ' is-done' : ''}">${i + 1}</span>`;
+      }
+      segsHtml = `
+        <div class="task-segments">
+          ${chips}
+          <span class="task-seg-duration" title="Click to edit segment duration">${segMin}m · ${_fmtDuration(totalMin)}</span>
+        </div>`;
+    }
+
     el.innerHTML = `
-      <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
-             aria-label="Mark complete">
-      <span class="task-title">${esc(task.title)}</span>
-      <div class="task-badges">
-        <span class="task-pomodoros">×${task.estimatedPomodoros}</span>
-        <span class="task-priority priority-${esc(task.priority)}">${esc(task.priority)}</span>
-        ${task.category ? `<span class="task-category">${esc(task.category)}</span>` : ''}
+      <div class="task-card-main">
+        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
+               aria-label="Mark complete">
+        <span class="task-title">${esc(task.title)}</span>
+        <div class="task-badges">
+          <span class="task-pomodoros">×${task.estimatedPomodoros}</span>
+          <span class="task-priority priority-${esc(task.priority)}">${esc(task.priority)}</span>
+          ${task.category ? `<span class="task-category">${esc(task.category)}</span>` : ''}
+        </div>
+        <button class="task-delete" aria-label="Delete task" tabindex="-1">×</button>
+        <div class="task-drag-handle" aria-hidden="true">⠿</div>
       </div>
-      <button class="task-delete" aria-label="Delete task" tabindex="-1">×</button>
-      <div class="task-drag-handle" aria-hidden="true">⠿</div>
+      ${segsHtml}
     `;
 
     // ── Event listeners ────────────────────────────────────────
@@ -111,6 +141,12 @@ export class TaskManager {
       e => this._editPomodoros(e.currentTarget, task.id));
     el.querySelector('.task-delete').addEventListener('click',
       () => this._deleteTask(task.id, el));
+
+    const segDurationEl = el.querySelector('.task-seg-duration');
+    if (segDurationEl) {
+      segDurationEl.addEventListener('click',
+        e => this._editSegmentMinutes(e.currentTarget, task.id));
+    }
 
     // Desktop drag-and-drop
     el.addEventListener('dragstart', e => this._onDragStart(e, idx));
@@ -210,6 +246,52 @@ export class TaskManager {
       if (done) return; done = true;
       const newBadge = makeSpan('task-pomodoros', `×${orig}`);
       newBadge.addEventListener('click', e => this._editPomodoros(e.currentTarget, id));
+      input.replaceWith(newBadge);
+    };
+
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); save(); }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+  }
+
+  _editSegmentMinutes(badge, id) {
+    const task = this._find(id);
+    if (!task) return;
+    const defaultMin = this._settings?.pomodoroDuration ?? 25;
+    const orig = task.segmentMinutes || defaultMin;
+    const input = Object.assign(document.createElement('input'), {
+      type: 'number', min: '5', max: '120',
+      className: 'task-pomodoros-edit',
+      value: String(orig),
+      style: 'width:52px',
+    });
+    badge.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let done = false;
+    const save = async () => {
+      if (done) return; done = true;
+      const val = Math.max(5, Math.min(120, parseInt(input.value, 10) || orig));
+      const { data } = await updateTask(id, { segmentMinutes: val });
+      if (data) {
+        this._replace(id, data);
+        this._render();
+      } else {
+        // restore badge on failure
+        const newBadge = makeSpan('task-seg-duration', `${orig}m`);
+        newBadge.addEventListener('click', e => this._editSegmentMinutes(e.currentTarget, id));
+        input.replaceWith(newBadge);
+      }
+    };
+    const cancel = () => {
+      if (done) return; done = true;
+      const segMin = task.segmentMinutes || defaultMin;
+      const totalMin = task.estimatedPomodoros * segMin;
+      const newBadge = makeSpan('task-seg-duration', `${segMin}m · ${_fmtDuration(totalMin)}`);
+      newBadge.addEventListener('click', e => this._editSegmentMinutes(e.currentTarget, id));
       input.replaceWith(newBadge);
     };
 
@@ -371,4 +453,12 @@ function makeSpan(cls, text) {
   s.className   = cls;
   s.textContent = text;
   return s;
+}
+
+/** Format total minutes as "Xh Ym" or "Ym". */
+function _fmtDuration(totalMin) {
+  if (totalMin < 60) return `${totalMin}m`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }

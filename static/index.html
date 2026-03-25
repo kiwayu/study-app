@@ -81,6 +81,9 @@
           >
           <div class="quick-add-meta">
             <input type="number" id="new-task-pomodoros" class="meta-number" value="1" min="1" max="9" aria-label="Estimated pomodoros">
+            <input id="new-task-segment" type="number" min="5" max="120"
+                   placeholder="25m" class="meta-number" title="Segment duration in minutes (leave blank for default)"
+                   style="width:52px">
             <select id="new-task-priority" class="meta-select" aria-label="Priority">
               <option value="high">High</option>
               <option value="medium" selected>Med</option>

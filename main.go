@@ -33,6 +33,7 @@ type Task struct {
 	Category           string `json:"category"`
 	Completed          bool   `json:"completed"`
 	Order              int    `json:"order"`
+	SegmentMinutes     int    `json:"segmentMinutes"`    // 0 = use global pomodoroDuration
 }
 
 type Settings struct {
@@ -68,6 +69,7 @@ type CreateTaskRequest struct {
 	EstimatedPomodoros int    `json:"estimatedPomodoros"`
 	Priority           string `json:"priority"`
 	Category           string `json:"category"`
+	SegmentMinutes     int    `json:"segmentMinutes"`
 }
 
 type UpdateTaskRequest struct {
@@ -78,6 +80,7 @@ type UpdateTaskRequest struct {
 	Category           *string `json:"category"`
 	Completed          *bool   `json:"completed"`
 	Order              *int    `json:"order"`
+	SegmentMinutes     *int    `json:"segmentMinutes"`
 }
 
 type StartRequest struct {
@@ -232,6 +235,7 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 		Priority:           req.Priority,
 		Category:           req.Category,
 		Order:              maxOrder,
+		SegmentMinutes:     req.SegmentMinutes,
 	}
 	store.Tasks = append(store.Tasks, task)
 	persistState()
@@ -274,6 +278,9 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.Order != nil {
 			store.Tasks[i].Order = *req.Order
+		}
+		if req.SegmentMinutes != nil {
+			store.Tasks[i].SegmentMinutes = *req.SegmentMinutes
 		}
 		persistState()
 		writeJSON(w, http.StatusOK, store.Tasks[i])
