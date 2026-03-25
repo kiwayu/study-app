@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sort"
 	"sync"
 	"time"
+
+	webview "github.com/jchv/go-webview2"
 )
 
 
@@ -443,6 +446,37 @@ func main() {
 	}
 	mux.Handle("/", http.FileServer(http.FS(subFS)))
 
-	log.Println("Listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", corsMiddleware(mux)))
+	// Pick a random free port on localhost
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		log.Fatalf("listen: %v", err)
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	url := fmt.Sprintf("http://127.0.0.1:%d", port)
+
+	// Start HTTP server in background
+	go func() {
+		log.Printf("Listening on %s", url)
+		if err := http.Serve(ln, corsMiddleware(mux)); err != nil {
+			log.Printf("server: %v", err)
+		}
+	}()
+
+	// Give the server a moment to bind
+	time.Sleep(100 * time.Millisecond)
+
+	// Open native desktop window
+	w := webview.NewWithOptions(webview.WebViewOptions{
+		Debug:     false,
+		AutoFocus: true,
+		WindowOptions: webview.WindowOptions{
+			Title:  "Study Session",
+			Width:  393,
+			Height: 852,
+		},
+	})
+	defer w.Destroy()
+	w.SetSize(393, 852, webview.HintNone)
+	w.Navigate(url)
+	w.Run()
 }
