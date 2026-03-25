@@ -60,33 +60,43 @@ export class StatsPanel {
 
 // ── Builders ────────────────────────────────────────────────
 
+// Cell size constants — must match CSS .hm-cell width/height and .hm-grid gap
+const HM_CELL = 13; // px
+const HM_GAP  = 2;  // px
+const HM_COL  = HM_CELL + HM_GAP; // px per column (15)
+const HM_DAY_LABEL_W = 24; // px — matches .hm-day-labels width in CSS
+
 /** Render a 52-week contribution grid (year view). */
 function _buildYear(counts) {
-  const today   = new Date();
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
   const max = Math.max(1, ...Object.values(counts));
 
-  // Start from the Sunday 52 weeks ago
+  // Start from the Sunday ~52 weeks ago
   const start = new Date(today);
   start.setDate(start.getDate() - 364 - start.getDay());
 
-  // Month labels
+  const totalWeeks = Math.ceil(365 / 7) + 1;
+
+  // Build month labels with pixel widths proportional to weeks spanned
   const months = [];
   let cur = new Date(start);
   let lastMonth = -1;
-  const totalWeeks = Math.ceil(365 / 7) + 1;
-
   for (let w = 0; w < totalWeeks; w++) {
     const m = cur.getMonth();
     if (m !== lastMonth) {
-      months.push({ week: w, label: cur.toLocaleString('default', { month: 'short' }) });
+      if (months.length > 0) months[months.length - 1].weeks = w - months[months.length - 1].startWeek;
+      months.push({ startWeek: w, label: cur.toLocaleString('default', { month: 'short' }), weeks: 0 });
       lastMonth = m;
     }
     cur.setDate(cur.getDate() + 7);
   }
+  if (months.length > 0) months[months.length - 1].weeks = totalWeeks - months[months.length - 1].startWeek;
 
-  const monthBar = months.map(({ week, label }) =>
-    `<span class="hm-month-label" style="grid-column:${week + 1}">${label}</span>`
+  // Day spacer width = day-labels width + gap between day-labels and grid
+  const spacerW = HM_DAY_LABEL_W + HM_GAP * 2;
+  const monthStrip = months.map(m =>
+    `<span style="flex:0 0 ${m.weeks * HM_COL}px;overflow:hidden;white-space:nowrap">${m.label}</span>`
   ).join('');
 
   // Day cells
@@ -107,12 +117,17 @@ function _buildYear(counts) {
   }
 
   return `
-    <div class="hm-year-wrap">
-      <div class="hm-month-row">${monthBar}</div>
-      <div class="hm-day-labels">
-        <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+    <div class="hm-outer">
+      <div class="hm-top-row">
+        <div style="flex:0 0 ${spacerW}px"></div>
+        <div class="hm-month-strip">${monthStrip}</div>
       </div>
-      <div class="hm-grid">${cells}</div>
+      <div class="hm-grid-row">
+        <div class="hm-day-labels">
+          <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+        </div>
+        <div class="hm-grid">${cells}</div>
+      </div>
     </div>
     <div class="hm-legend">
       <span class="hm-legend-label">Less</span>
