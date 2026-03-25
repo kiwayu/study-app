@@ -12,10 +12,12 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	webview "github.com/jchv/go-webview2"
 )
@@ -122,6 +124,18 @@ func defaultState() AppState {
 			SegmentType: "focus",
 		},
 	}
+}
+
+// hexToCOLORREF converts "#rrggbb" to a Win32 COLORREF (0x00BBGGRR).
+func hexToCOLORREF(hex string) uint32 {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return 0
+	}
+	r, _ := strconv.ParseUint(hex[0:2], 16, 8)
+	g, _ := strconv.ParseUint(hex[2:4], 16, 8)
+	b, _ := strconv.ParseUint(hex[4:6], 16, 8)
+	return uint32(r) | uint32(g)<<8 | uint32(b)<<16
 }
 
 // sanitiseSettings resets any out-of-range settings values to their defaults.
@@ -607,6 +621,33 @@ func main() {
 			insertAfter = hwndTopmost
 		}
 		setWindowPos.Call(hwnd, insertAfter, 0, 0, 0, 0, swpNoMove|swpNoSize)
+		return nil
+	})
+
+	// Title-bar theming via DWM (Windows 11+).
+	dwmapi := syscall.NewLazyDLL("dwmapi.dll")
+	dwmSetAttr := dwmapi.NewProc("DwmSetWindowAttribute")
+
+	type titleBarReq struct {
+		IsDark bool   `json:"isDark"`
+		Bg     string `json:"bg"` // "#rrggbb"
+	}
+	w.Bind("goSetTitleBar", func(req titleBarReq) error {
+		bg := hexToCOLORREF(req.Bg)
+		dark := uint32(0)
+		if req.IsDark {
+			dark = 1
+		}
+		textColor := uint32(0x00DDDDDD) // light text for dark themes
+		if !req.IsDark {
+			textColor = 0x00222222 // dark text for light themes
+		}
+		// DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (controls caption button icon colour)
+		dwmSetAttr.Call(hwnd, 20, uintptr(unsafe.Pointer(&dark)), 4)
+		// DWMWA_CAPTION_COLOR = 35
+		dwmSetAttr.Call(hwnd, 35, uintptr(unsafe.Pointer(&bg)), 4)
+		// DWMWA_TEXT_COLOR = 36
+		dwmSetAttr.Call(hwnd, 36, uintptr(unsafe.Pointer(&textColor)), 4)
 		return nil
 	})
 

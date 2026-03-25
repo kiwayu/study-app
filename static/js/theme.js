@@ -49,6 +49,9 @@ export function setTheme(id) {
 
   _syncMoonIcon(theme.dark);
   _syncPickerActive(theme.id);
+
+  // Sync the native title bar colour (desktop app only — no-op in browser)
+  window.goSetTitleBar?.({ isDark: theme.dark, bg: theme.c[0] })?.catch?.(() => {});
 }
 
 /** Populate a container element with theme swatch buttons. */
@@ -76,9 +79,7 @@ export function buildThemePicker(containerEl) {
 /** Wire the moon/sun toggle button (quick dark↔light switch). */
 export function initTheme() {
   const saved = localStorage.getItem(STORAGE_KEY) ?? DEFAULT_THEME_ID;
-  const theme = THEMES.find(t => t.id === saved) ?? THEMES[0];
-  document.documentElement.setAttribute('data-theme', theme.id);
-  _syncMoonIcon(theme.dark);
+  setTheme(saved); // applies theme, syncs moon icon, and sets native title bar
 
   document.getElementById('theme-btn')?.addEventListener('click', () => {
     const currentId  = document.documentElement.getAttribute('data-theme') ?? DEFAULT_THEME_ID;
