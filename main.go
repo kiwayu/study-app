@@ -338,7 +338,7 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 		if req.Completed != nil {
 			if *req.Completed && !store.Tasks[i].Completed {
 				// Task is being marked complete — record timestamp
-				now := time.Now()
+				now := time.Now().Local()
 				store.Tasks[i].CompletedAt = &now
 			} else if !*req.Completed {
 				// Task is being un-completed — clear timestamp
@@ -441,7 +441,7 @@ func startSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "pomodoroCount cannot be negative")
 		return
 	}
-	now := time.Now()
+	now := time.Now().Local()
 	mu.Lock()
 	// If currently running, bank elapsed time into TotalElapsed before resetting
 	if store.Session.Status == "running" && store.Session.StartedAt != nil {
@@ -519,7 +519,7 @@ func getCompletions(w http.ResponseWriter, r *http.Request) {
 	counts := make(map[string]int)
 	for _, t := range tasks {
 		if t.Completed && t.CompletedAt != nil {
-			day := t.CompletedAt.Format("2006-01-02")
+			day := t.CompletedAt.Local().Format("2006-01-02")
 			counts[day]++
 		}
 	}
