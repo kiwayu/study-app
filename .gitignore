@@ -12,3 +12,4 @@ data/
 
 # Claude settings
 .claude/
+docs/
