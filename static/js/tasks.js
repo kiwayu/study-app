@@ -1,29 +1,5 @@
 import { createTask, updateTask, deleteTask } from './api.js';
 
-// ── Pastel colour system ──────────────────────────────────────
-// Each task is assigned a colour deterministically from its ID using
-// FNV-1a hashing, so colours are stable across renders and reloads.
-
-const PASTEL_PALETTE = [
-  { bg: 'rgba(251,113,133,0.15)', accent: '#fb7185' },  // rose
-  { bg: 'rgba(167,139,250,0.15)', accent: '#a78bfa' },  // violet
-  { bg: 'rgba(52,211,153,0.15)',  accent: '#34d399' },  // emerald
-  { bg: 'rgba(56,189,248,0.15)',  accent: '#38bdf8' },  // sky
-  { bg: 'rgba(251,191,36,0.15)',  accent: '#fbbf24' },  // amber
-  { bg: 'rgba(244,114,182,0.15)', accent: '#f472b6' },  // pink
-  { bg: 'rgba(129,140,248,0.15)', accent: '#818cf8' },  // indigo
-  { bg: 'rgba(45,212,191,0.15)',  accent: '#2dd4bf' },  // teal
-];
-
-/** FNV-1a 32-bit hash — fast, good distribution over short UUIDs. */
-function taskColor(id) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < id.length; i++) {
-    h ^= id.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return PASTEL_PALETTE[h % PASTEL_PALETTE.length];
-}
 
 const PRIORITY_CYCLE = ['high', 'medium', 'low'];
 
@@ -81,25 +57,23 @@ export class TaskManager {
   }
 
   _buildCard(task, idx) {
-    const color = taskColor(task.id);
-    const segMin = task.segmentMinutes || (this._settings?.pomodoroDuration ?? 25);
-    const totalMin = task.estimatedPomodoros * segMin;
-
     const el = document.createElement('div');
     el.className = 'task-card' + (task.completed ? ' is-completed' : '');
     el.dataset.id  = task.id;
     el.dataset.idx = String(idx);
     el.setAttribute('role', 'listitem');
     el.draggable = true;
-
-    el.style.setProperty('--card-bg',     color.bg);
-    el.style.setProperty('--card-accent', color.accent);
+    el.dataset.priority = task.priority;
 
     // Height scales with segment count: base 52px + 26px per additional segment
     const minH = 52 + Math.max(0, task.estimatedPomodoros - 1) * 26;
     el.style.minHeight = `${minH}px`;
 
-    // Build segment chips (only show when more than 1 segment)
+    const segMin = task.segmentMinutes || (this._settings?.pomodoroDuration ?? 25);
+    const totalMin = task.estimatedPomodoros * segMin;
+    const timeLabel = _fmtDuration(totalMin);
+
+    // Build segment chips (only when estimatedPomodoros > 1)
     let segsHtml = '';
     if (task.estimatedPomodoros > 1) {
       let chips = '';
@@ -108,27 +82,32 @@ export class TaskManager {
         chips += `<span class="task-seg${done ? ' is-done' : ''}">${i + 1}</span>`;
       }
       segsHtml = `
-        <div class="task-segments">
-          ${chips}
-          <span class="task-seg-duration" title="Click to edit segment duration">${segMin}m · ${_fmtDuration(totalMin)}</span>
-        </div>`;
+    <div class="task-segments">
+      ${chips}
+      <span class="task-seg-duration" title="Click to edit segment duration">${segMin}m · ${_fmtDuration(totalMin)}</span>
+    </div>`;
     }
 
     el.innerHTML = `
-      <div class="task-card-main">
-        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
-               aria-label="Mark complete">
-        <span class="task-title">${esc(task.title)}</span>
-        <div class="task-badges">
-          <span class="task-pomodoros">×${task.estimatedPomodoros}</span>
-          <span class="task-priority priority-${esc(task.priority)}">${esc(task.priority)}</span>
-          ${task.category ? `<span class="task-category">${esc(task.category)}</span>` : ''}
-        </div>
-        <button class="task-delete" aria-label="Delete task" tabindex="-1">×</button>
-        <div class="task-drag-handle" aria-hidden="true">⠿</div>
+  <div class="task-time-strip" aria-hidden="true">
+    <span class="task-time-label">${timeLabel}</span>
+  </div>
+  <div class="task-card-body">
+    <div class="task-card-main">
+      <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
+             aria-label="Mark complete">
+      <span class="task-title">${esc(task.title)}</span>
+      <div class="task-badges">
+        <span class="task-pomodoros">×${task.estimatedPomodoros}</span>
+        <span class="task-priority priority-${esc(task.priority)}">${esc(task.priority)}</span>
+        ${task.category ? `<span class="task-category">${esc(task.category)}</span>` : ''}
       </div>
-      ${segsHtml}
-    `;
+      <button class="task-delete" aria-label="Delete task" tabindex="-1">×</button>
+      <div class="task-drag-handle" aria-hidden="true">⠿</div>
+    </div>
+    ${segsHtml}
+  </div>
+`;
 
     // ── Event listeners ────────────────────────────────────────
     el.querySelector('.task-checkbox').addEventListener('change',

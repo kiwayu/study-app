@@ -303,20 +303,19 @@
 
 /* ── Task cards (pastel kanban style) ────────────────── */
 /*
- * Each card receives --card-bg and --card-accent as inline CSS
- * custom properties set by tasks.js via taskColor(id).
+ * --card-accent and --card-bg are set via [data-priority] CSS rules
+ * below, using theme-aware --color-high/medium/low variables.
  */
 .task-card {
   background: var(--card-bg, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-left: 3px solid var(--card-accent, var(--color-border));
   border-radius: var(--radius-md);
-  padding: 8px 10px 8px 12px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: stretch;
   gap: 0;
   cursor: default;
+  overflow: hidden;
   transition: border-color var(--duration-fast), opacity var(--duration-fast);
   min-height: 44px;
 }
@@ -328,8 +327,7 @@
 }
 
 .task-card:hover {
-  border-color: rgba(255, 255, 255, 0.1);
-  border-left-color: var(--card-accent, var(--color-border));
+  border-color: color-mix(in srgb, var(--card-accent, var(--color-accent)) 40%, var(--color-border));
 }
 .task-card.is-completed {
   opacity: 0.45;
@@ -347,6 +345,52 @@
 }
 .task-card.is-deleting {
   animation: taskDelete var(--duration-normal) ease forwards;
+}
+
+/* Priority-based card colours — theme-aware via CSS variables */
+.task-card[data-priority="high"] {
+  --card-accent: var(--color-high);
+  --card-bg: color-mix(in srgb, var(--color-high) 10%, var(--color-surface));
+}
+.task-card[data-priority="medium"] {
+  --card-accent: var(--color-medium);
+  --card-bg: color-mix(in srgb, var(--color-medium) 10%, var(--color-surface));
+}
+.task-card[data-priority="low"] {
+  --card-accent: var(--color-low);
+  --card-bg: color-mix(in srgb, var(--color-low) 8%, var(--color-surface));
+}
+
+/* ── Time strip (left side of card) ─────────────────────────── */
+.task-time-strip {
+  width: 30px;
+  min-width: 30px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--card-accent, var(--color-accent)) 18%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-time-label {
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--card-accent, var(--color-accent));
+  opacity: 0.85;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.task-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 10px 8px 8px;
+  min-width: 0;
 }
 
 .task-checkbox {
