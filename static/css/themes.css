@@ -1,0 +1,422 @@
+/* ================================================================
+   THEMES — each block defines CSS custom properties that override
+   the defaults in base.css. Applied via data-theme on <html>.
+   ================================================================ */
+
+/* ── Serika Dark ─────────────────────────────────────────────── */
+[data-theme="serika-dark"] {
+  --color-bg:         #323437;
+  --color-surface:    #2c2e31;
+  --color-border:     #646669;
+  --color-muted:      #646669;
+  --color-text:       #d1d0c5;
+  --color-accent:     #e2b714;
+  --color-accent-dim: #c49e0f;
+  --color-danger:     #ca4754;
+  --color-high:       #ca4754;
+  --color-medium:     #d19a16;
+  --color-low:        #646669;
+  --color-success-bg: rgba(226,183,20,0.12);
+  --color-info-bg:    rgba(100,102,105,0.15);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.5);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.4);
+}
+
+/* ── Serika Light ────────────────────────────────────────────── */
+[data-theme="serika-light"] {
+  --color-bg:         #e1ded7;
+  --color-surface:    #cac8be;
+  --color-border:     #b5b3aa;
+  --color-muted:      #7c7b72;
+  --color-text:       #323437;
+  --color-accent:     #e2b714;
+  --color-accent-dim: #c49e0f;
+  --color-danger:     #ca4754;
+  --color-high:       #ca4754;
+  --color-medium:     #d19a16;
+  --color-low:        #7c7b72;
+  --color-success-bg: rgba(226,183,20,0.15);
+  --color-info-bg:    rgba(124,123,114,0.12);
+  --shadow-card:      0 8px 24px rgba(0,0,0,0.08);
+  --shadow-drag:      0 8px 20px rgba(0,0,0,0.12);
+}
+
+/* ── Base ────────────────────────────────────────────────────── */
+[data-theme="base"] {
+  --color-bg:         #ffffff;
+  --color-surface:    #f5f5f5;
+  --color-border:     #e0e0e0;
+  --color-muted:      #9e9e9e;
+  --color-text:       #111111;
+  --color-accent:     #888888;
+  --color-accent-dim: #555555;
+  --color-danger:     #d32f2f;
+  --color-high:       #d32f2f;
+  --color-medium:     #f57c00;
+  --color-low:        #9e9e9e;
+  --color-success-bg: rgba(0,0,0,0.05);
+  --color-info-bg:    rgba(0,0,0,0.04);
+  --shadow-card:      0 4px 16px rgba(0,0,0,0.08);
+  --shadow-drag:      0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ── Monokai ─────────────────────────────────────────────────── */
+[data-theme="monokai"] {
+  --color-bg:         #272822;
+  --color-surface:    #1e1f1c;
+  --color-border:     #3e3d32;
+  --color-muted:      #75715e;
+  --color-text:       #f8f8f2;
+  --color-accent:     #a6e22e;
+  --color-accent-dim: #7db31d;
+  --color-danger:     #f92672;
+  --color-high:       #f92672;
+  --color-medium:     #fd971f;
+  --color-low:        #75715e;
+  --color-success-bg: rgba(166,226,46,0.1);
+  --color-info-bg:    rgba(102,217,239,0.1);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Dracula ─────────────────────────────────────────────────── */
+[data-theme="dracula"] {
+  --color-bg:         #282a36;
+  --color-surface:    #21222c;
+  --color-border:     #44475a;
+  --color-muted:      #6272a4;
+  --color-text:       #f8f8f2;
+  --color-accent:     #bd93f9;
+  --color-accent-dim: #9d73e8;
+  --color-danger:     #ff5555;
+  --color-high:       #ff5555;
+  --color-medium:     #ffb86c;
+  --color-low:        #6272a4;
+  --color-success-bg: rgba(80,250,123,0.1);
+  --color-info-bg:    rgba(189,147,249,0.1);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Nord ────────────────────────────────────────────────────── */
+[data-theme="nord"] {
+  --color-bg:         #2e3440;
+  --color-surface:    #252a33;
+  --color-border:     #3b4252;
+  --color-muted:      #616e88;
+  --color-text:       #eceff4;
+  --color-accent:     #88c0d0;
+  --color-accent-dim: #6ba4b5;
+  --color-danger:     #bf616a;
+  --color-high:       #bf616a;
+  --color-medium:     #d08770;
+  --color-low:        #616e88;
+  --color-success-bg: rgba(163,190,140,0.12);
+  --color-info-bg:    rgba(136,192,208,0.12);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.5);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.4);
+}
+
+/* ── Gruvbox Dark ────────────────────────────────────────────── */
+[data-theme="gruvbox-dark"] {
+  --color-bg:         #282828;
+  --color-surface:    #1d2021;
+  --color-border:     #3c3836;
+  --color-muted:      #7c6f64;
+  --color-text:       #ebdbb2;
+  --color-accent:     #b8bb26;
+  --color-accent-dim: #98971a;
+  --color-danger:     #cc241d;
+  --color-high:       #cc241d;
+  --color-medium:     #d79921;
+  --color-low:        #7c6f64;
+  --color-success-bg: rgba(184,187,38,0.1);
+  --color-info-bg:    rgba(131,165,152,0.1);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Terror Below ────────────────────────────────────────────── */
+[data-theme="terror-below"] {
+  --color-bg:         #0d0d0d;
+  --color-surface:    #111111;
+  --color-border:     #2a0a0a;
+  --color-muted:      #6b3232;
+  --color-text:       #e8d5b7;
+  --color-accent:     #c0392b;
+  --color-accent-dim: #922b21;
+  --color-danger:     #e74c3c;
+  --color-high:       #e74c3c;
+  --color-medium:     #e67e22;
+  --color-low:        #6b3232;
+  --color-success-bg: rgba(192,57,43,0.1);
+  --color-info-bg:    rgba(107,50,50,0.12);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.8);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.7);
+}
+
+/* ── Alduin ──────────────────────────────────────────────────── */
+[data-theme="alduin"] {
+  --color-bg:         #1c1c1c;
+  --color-surface:    #141414;
+  --color-border:     #333333;
+  --color-muted:      #6a6a6a;
+  --color-text:       #d4be98;
+  --color-accent:     #d65d0e;
+  --color-accent-dim: #a94b0b;
+  --color-danger:     #cc241d;
+  --color-high:       #cc241d;
+  --color-medium:     #d79921;
+  --color-low:        #6a6a6a;
+  --color-success-bg: rgba(214,93,14,0.1);
+  --color-info-bg:    rgba(106,106,106,0.12);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.7);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.6);
+}
+
+/* ── Night Runner ────────────────────────────────────────────── */
+[data-theme="night-runner"] {
+  --color-bg:         #1a1a2e;
+  --color-surface:    #16213e;
+  --color-border:     #1a3a5c;
+  --color-muted:      #4a6a8a;
+  --color-text:       #eaeaea;
+  --color-accent:     #00f5d4;
+  --color-accent-dim: #00bfa5;
+  --color-danger:     #ff4757;
+  --color-high:       #ff4757;
+  --color-medium:     #ffa502;
+  --color-low:        #4a6a8a;
+  --color-success-bg: rgba(0,245,212,0.1);
+  --color-info-bg:    rgba(26,58,92,0.3);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Dark+ ───────────────────────────────────────────────────── */
+[data-theme="dark-plus"] {
+  --color-bg:         #1e1e1e;
+  --color-surface:    #252526;
+  --color-border:     #333333;
+  --color-muted:      #6a9955;
+  --color-text:       #d4d4d4;
+  --color-accent:     #569cd6;
+  --color-accent-dim: #3b7cb5;
+  --color-danger:     #f44747;
+  --color-high:       #f44747;
+  --color-medium:     #ce9178;
+  --color-low:        #6a9955;
+  --color-success-bg: rgba(86,156,214,0.1);
+  --color-info-bg:    rgba(86,156,214,0.08);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Future Funk ─────────────────────────────────────────────── */
+[data-theme="future-funk"] {
+  --color-bg:         #241734;
+  --color-surface:    #1d1028;
+  --color-border:     #3d2355;
+  --color-muted:      #9b6bb5;
+  --color-text:       #f2aaff;
+  --color-accent:     #ff79c6;
+  --color-accent-dim: #d652a8;
+  --color-danger:     #ff5555;
+  --color-high:       #ff5555;
+  --color-medium:     #ffb86c;
+  --color-low:        #9b6bb5;
+  --color-success-bg: rgba(255,121,198,0.1);
+  --color-info-bg:    rgba(61,35,85,0.4);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.7);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.6);
+}
+
+/* ── Laser ───────────────────────────────────────────────────── */
+[data-theme="laser"] {
+  --color-bg:         #1a0a2e;
+  --color-surface:    #150822;
+  --color-border:     #2d1050;
+  --color-muted:      #7040b0;
+  --color-text:       #e8e0ff;
+  --color-accent:     #ff00ff;
+  --color-accent-dim: #cc00cc;
+  --color-danger:     #ff0055;
+  --color-high:       #ff0055;
+  --color-medium:     #ff8800;
+  --color-low:        #7040b0;
+  --color-success-bg: rgba(255,0,255,0.1);
+  --color-info-bg:    rgba(45,16,80,0.4);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.75);
+  --shadow-drag:      0 16px 40px rgba(255,0,255,0.2);
+}
+
+/* ── Superuser ───────────────────────────────────────────────── */
+[data-theme="superuser"] {
+  --color-bg:         #0f1117;
+  --color-surface:    #0a0d12;
+  --color-border:     #1a2030;
+  --color-muted:      #3a5a4a;
+  --color-text:       #e8f0e8;
+  --color-accent:     #5af78e;
+  --color-accent-dim: #3bc06a;
+  --color-danger:     #ff5c57;
+  --color-high:       #ff5c57;
+  --color-medium:     #f3f99d;
+  --color-low:        #3a5a4a;
+  --color-success-bg: rgba(90,247,142,0.1);
+  --color-info-bg:    rgba(26,32,48,0.5);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.8);
+  --shadow-drag:      0 16px 40px rgba(90,247,142,0.15);
+}
+
+/* ── Cyberspace ──────────────────────────────────────────────── */
+[data-theme="cyberspace"] {
+  --color-bg:         #0d1117;
+  --color-surface:    #0a0d12;
+  --color-border:     #1a2530;
+  --color-muted:      #2a5060;
+  --color-text:       #c0e8e0;
+  --color-accent:     #00ffff;
+  --color-accent-dim: #00cccc;
+  --color-danger:     #ff0040;
+  --color-high:       #ff0040;
+  --color-medium:     #ffcc00;
+  --color-low:        #2a5060;
+  --color-success-bg: rgba(0,255,255,0.08);
+  --color-info-bg:    rgba(26,37,48,0.5);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.8);
+  --shadow-drag:      0 16px 40px rgba(0,255,255,0.15);
+}
+
+/* ── Synthwave ───────────────────────────────────────────────── */
+[data-theme="synthwave"] {
+  --color-bg:         #2b213a;
+  --color-surface:    #241b31;
+  --color-border:     #3d2d55;
+  --color-muted:      #9060a0;
+  --color-text:       #fce883;
+  --color-accent:     #f97e72;
+  --color-accent-dim: #d65a50;
+  --color-danger:     #fe4450;
+  --color-high:       #fe4450;
+  --color-medium:     #ffd319;
+  --color-low:        #9060a0;
+  --color-success-bg: rgba(249,126,114,0.1);
+  --color-info-bg:    rgba(61,45,85,0.4);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.65);
+  --shadow-drag:      0 16px 40px rgba(249,126,114,0.2);
+}
+
+/* ── Taro ────────────────────────────────────────────────────── */
+[data-theme="taro"] {
+  --color-bg:         #2d2640;
+  --color-surface:    #231e35;
+  --color-border:     #3d3560;
+  --color-muted:      #7060a0;
+  --color-text:       #c4b8d8;
+  --color-accent:     #c4aaf0;
+  --color-accent-dim: #a088d0;
+  --color-danger:     #f47c7c;
+  --color-high:       #f47c7c;
+  --color-medium:     #f0c87c;
+  --color-low:        #7060a0;
+  --color-success-bg: rgba(196,170,240,0.1);
+  --color-info-bg:    rgba(61,53,96,0.4);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.6);
+  --shadow-drag:      0 16px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Botanical ───────────────────────────────────────────────── */
+[data-theme="botanical"] {
+  --color-bg:         #e8f5e9;
+  --color-surface:    #ddefde;
+  --color-border:     #b5d5b8;
+  --color-muted:      #689f6e;
+  --color-text:       #2e3d2f;
+  --color-accent:     #4caf50;
+  --color-accent-dim: #388e3c;
+  --color-danger:     #c62828;
+  --color-high:       #c62828;
+  --color-medium:     #ef6c00;
+  --color-low:        #689f6e;
+  --color-success-bg: rgba(76,175,80,0.12);
+  --color-info-bg:    rgba(33,150,243,0.08);
+  --shadow-card:      0 4px 16px rgba(0,0,0,0.07);
+  --shadow-drag:      0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ── Froyo ───────────────────────────────────────────────────── */
+[data-theme="froyo"] {
+  --color-bg:         #fce4ec;
+  --color-surface:    #f5d0dd;
+  --color-border:     #e8b0c4;
+  --color-muted:      #c06080;
+  --color-text:       #4a2040;
+  --color-accent:     #e91e63;
+  --color-accent-dim: #c0155a;
+  --color-danger:     #b71c1c;
+  --color-high:       #b71c1c;
+  --color-medium:     #e65100;
+  --color-low:        #c06080;
+  --color-success-bg: rgba(233,30,99,0.1);
+  --color-info-bg:    rgba(232,176,196,0.3);
+  --shadow-card:      0 4px 16px rgba(0,0,0,0.07);
+  --shadow-drag:      0 4px 12px rgba(233,30,99,0.15);
+}
+
+/* ── Sewing Tin ──────────────────────────────────────────────── */
+[data-theme="sewing-tin"] {
+  --color-bg:         #f5f0e8;
+  --color-surface:    #ece7df;
+  --color-border:     #d4c8b4;
+  --color-muted:      #a08060;
+  --color-text:       #3d2b1f;
+  --color-accent:     #8b6914;
+  --color-accent-dim: #6b4f10;
+  --color-danger:     #a93226;
+  --color-high:       #a93226;
+  --color-medium:     #cb6d2f;
+  --color-low:        #a08060;
+  --color-success-bg: rgba(139,105,20,0.1);
+  --color-info-bg:    rgba(212,200,180,0.4);
+  --shadow-card:      0 4px 16px rgba(0,0,0,0.06);
+  --shadow-drag:      0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ── Honey ───────────────────────────────────────────────────── */
+[data-theme="honey"] {
+  --color-bg:         #fff8e1;
+  --color-surface:    #fff0c0;
+  --color-border:     #ffe082;
+  --color-muted:      #bf8f00;
+  --color-text:       #3e2723;
+  --color-accent:     #ff8f00;
+  --color-accent-dim: #cc7200;
+  --color-danger:     #b71c1c;
+  --color-high:       #b71c1c;
+  --color-medium:     #e65100;
+  --color-low:        #bf8f00;
+  --color-success-bg: rgba(255,143,0,0.1);
+  --color-info-bg:    rgba(255,224,130,0.4);
+  --shadow-card:      0 4px 16px rgba(0,0,0,0.07);
+  --shadow-drag:      0 4px 12px rgba(255,143,0,0.2);
+}
+
+/* ── Aurora ──────────────────────────────────────────────────── */
+[data-theme="aurora"] {
+  --color-bg:         #0d1b2a;
+  --color-surface:    #0a1520;
+  --color-border:     #1a3050;
+  --color-muted:      #3a6080;
+  --color-text:       #e8eaf6;
+  --color-accent:     #4dd0e1;
+  --color-accent-dim: #26c6da;
+  --color-danger:     #ef5350;
+  --color-high:       #ef5350;
+  --color-medium:     #ffa726;
+  --color-low:        #3a6080;
+  --color-success-bg: rgba(77,208,225,0.1);
+  --color-info-bg:    rgba(26,48,80,0.4);
+  --shadow-card:      0 32px 80px rgba(0,0,0,0.7);
+  --shadow-drag:      0 16px 40px rgba(77,208,225,0.15);
+}

@@ -5,14 +5,14 @@ import { createTask, updateTask, deleteTask } from './api.js';
 // FNV-1a hashing, so colours are stable across renders and reloads.
 
 const PASTEL_PALETTE = [
-  { bg: 'rgba(251,113,133,0.07)', accent: '#fb7185' },  // rose
-  { bg: 'rgba(167,139,250,0.07)', accent: '#a78bfa' },  // violet
-  { bg: 'rgba(52,211,153,0.07)',  accent: '#34d399' },  // emerald
-  { bg: 'rgba(56,189,248,0.07)',  accent: '#38bdf8' },  // sky
-  { bg: 'rgba(251,191,36,0.07)',  accent: '#fbbf24' },  // amber
-  { bg: 'rgba(244,114,182,0.07)', accent: '#f472b6' },  // pink
-  { bg: 'rgba(129,140,248,0.07)', accent: '#818cf8' },  // indigo
-  { bg: 'rgba(45,212,191,0.07)',  accent: '#2dd4bf' },  // teal
+  { bg: 'rgba(251,113,133,0.15)', accent: '#fb7185' },  // rose
+  { bg: 'rgba(167,139,250,0.15)', accent: '#a78bfa' },  // violet
+  { bg: 'rgba(52,211,153,0.15)',  accent: '#34d399' },  // emerald
+  { bg: 'rgba(56,189,248,0.15)',  accent: '#38bdf8' },  // sky
+  { bg: 'rgba(251,191,36,0.15)',  accent: '#fbbf24' },  // amber
+  { bg: 'rgba(244,114,182,0.15)', accent: '#f472b6' },  // pink
+  { bg: 'rgba(129,140,248,0.15)', accent: '#818cf8' },  // indigo
+  { bg: 'rgba(45,212,191,0.15)',  accent: '#2dd4bf' },  // teal
 ];
 
 /** FNV-1a 32-bit hash — fast, good distribution over short UUIDs. */

@@ -2,7 +2,7 @@ import { getTasks, getSettings, getSession, startSession, pauseSession, stopSess
 import { TimerEngine, SEGMENT_SEQUENCE } from './timer.js';
 import { TaskManager } from './tasks.js';
 import { SettingsManager } from './settings.js';
-import { initTheme } from './theme.js';
+import { initTheme, buildThemePicker } from './theme.js';
 import { initDesktop } from './desktop.js';
 
 // ── Constants ────────────────────────────────────────────────
@@ -289,6 +289,7 @@ settings.onsave = s => {
 async function init() {
   initTheme();
   initDesktop();
+  buildThemePicker(document.getElementById('theme-grid'));
 
   const [tasksRes, sessionRes, settingsRes] = await Promise.all([
     getTasks(), getSession(), getSettings(),
