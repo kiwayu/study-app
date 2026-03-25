@@ -4,6 +4,7 @@ import { TaskManager } from './tasks.js';
 import { SettingsManager } from './settings.js';
 import { initTheme, buildThemePicker } from './theme.js';
 import { initDesktop } from './desktop.js';
+import { initRuler } from './ruler.js';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -289,6 +290,7 @@ settings.onsave = s => {
 async function init() {
   initTheme();
   initDesktop();
+  initRuler();
   buildThemePicker(document.getElementById('theme-grid'));
 
   const [tasksRes, sessionRes, settingsRes] = await Promise.all([

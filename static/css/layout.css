@@ -158,3 +158,63 @@ body {
     width: auto;
   }
 }
+
+/* ── Day ruler (fixed right edge, decorative) ────────── */
+.day-ruler {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ruler-tick {
+  position: absolute;
+  right: 4px;
+  transform: translateY(-50%);
+  font-size: 8px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  color: var(--color-text);
+  opacity: 0.1;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.ruler-now {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-right: 4px;
+}
+
+.ruler-now-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.ruler-now-time {
+  font-size: 9px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--color-accent);
+  opacity: 0.55;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* Hide ruler on narrow viewports where space is tight */
+@media (max-width: 640px) {
+  .day-ruler { display: none; }
+}
