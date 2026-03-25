@@ -102,6 +102,21 @@ export class TimerEngine {
     this._segmentDurationMs = this._durationMs(this._segmentType, settings);
   }
 
+  /**
+   * Re-sync internal elapsed state from a fresh server session snapshot.
+   * Only meaningful while the timer is running; does not restart or stop the RAF loop.
+   * @param {{ status: string, startedAt: string, elapsedSeconds: number }} session
+   */
+  sync(session) {
+    if (session.status !== 'running') return;
+    const serverElapsedMs = session.elapsedSeconds * 1000
+      + (Date.now() - new Date(session.startedAt).getTime());
+    // Bank the corrected value and reset the RAF reference point so that
+    // getCurrentElapsedMs() immediately reflects the server's view of elapsed time.
+    this._bankedMs     = Math.max(0, serverElapsedMs);
+    this._rafStartTime = performance.now();
+  }
+
   /** Current elapsed ms in this segment (including running time if active). */
   getCurrentElapsedMs() {
     if (this._rafId) {

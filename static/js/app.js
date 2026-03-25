@@ -323,4 +323,35 @@ async function init() {
   }
 }
 
+// ── Visibility-change re-sync ─────────────────────────────────
+// When the OS or browser hides the page (sleep, alt-tab, etc.) the RAF loop
+// pauses. On return, we fetch a fresh session from the server and correct the
+// timer's internal elapsed state so the countdown is immediately accurate.
+// We skip re-syncs for very brief interruptions (< 2 s) to avoid jitter on
+// quick alt-tabs.
+
+let _hiddenAt = 0;
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'hidden') {
+    _hiddenAt = Date.now();
+    return;
+  }
+
+  // Page became visible
+  if (currentSession?.status !== 'running') return;
+  if (_hiddenAt > 0 && Date.now() - _hiddenAt < 2000) return;
+
+  try {
+    const { data } = await getSession();
+    if (!data) return;
+    currentSession = data;
+    lastWaterAt    = data.lastWaterAt;
+    lastStretchAt  = data.lastStretchAt;
+    timer.sync(data);
+  } catch {
+    // Silent fail — the timer will self-correct on the next user action
+  }
+});
+
 document.addEventListener('DOMContentLoaded', init);
