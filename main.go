@@ -10,7 +10,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -100,8 +102,8 @@ type TotalsRequest struct {
 var (
 	mu        sync.RWMutex
 	store     AppState
-	dataDir   = "data"
-	stateFile = "data/state.json"
+	dataDir   string
+	stateFile string
 )
 
 func defaultState() AppState {
@@ -121,9 +123,21 @@ func defaultState() AppState {
 	}
 }
 
+// sanitiseSettings resets any out-of-range settings values to their defaults.
+func sanitiseSettings(s *Settings) {
+	def := defaultState().Settings
+	if s.PomodoroDuration < 1 || s.PomodoroDuration > 120 { s.PomodoroDuration = def.PomodoroDuration }
+	if s.ShortBreak < 1 || s.ShortBreak > 60            { s.ShortBreak = def.ShortBreak }
+	if s.LongBreak < 1 || s.LongBreak > 120             { s.LongBreak = def.LongBreak }
+	if s.WaterInterval < 1 || s.WaterInterval > 480     { s.WaterInterval = def.WaterInterval }
+	if s.StretchInterval < 1 || s.StretchInterval > 480 { s.StretchInterval = def.StretchInterval }
+}
+
 func generateID() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		log.Fatalf("rand.Read: %v", err)
+	}
 	b[6] = (b[6] & 0x0f) | 0x40 // version 4
 	b[8] = (b[8] & 0x3f) | 0x80 // variant bits
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
@@ -144,6 +158,7 @@ func loadState() {
 	if store.Tasks == nil {
 		store.Tasks = []Task{}
 	}
+	sanitiseSettings(&store.Settings)
 }
 
 // persistState must be called with mu write-locked. Disk I/O inside the lock
@@ -161,6 +176,7 @@ func persistState() {
 	}
 	if err := os.Rename(tmp, stateFile); err != nil {
 		log.Printf("persistState rename: %v", err)
+		os.Remove(tmp) // clean up orphaned temp file
 	}
 }
 
@@ -180,7 +196,10 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin == "" || strings.HasPrefix(origin, "http://127.0.0.1") {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
@@ -218,6 +237,14 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Priority != "high" && req.Priority != "medium" && req.Priority != "low" {
 		writeError(w, http.StatusBadRequest, "priority must be high, medium, or low")
+		return
+	}
+	if len(req.Title) > 200 {
+		writeError(w, http.StatusBadRequest, "title must be 200 characters or fewer")
+		return
+	}
+	if len(req.Category) > 100 {
+		writeError(w, http.StatusBadRequest, "category must be 100 characters or fewer")
 		return
 	}
 
@@ -259,24 +286,48 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if req.Title != nil {
+			if len(*req.Title) > 200 {
+				writeError(w, http.StatusBadRequest, "title must be 200 characters or fewer")
+				return
+			}
 			store.Tasks[i].Title = *req.Title
 		}
+		if req.Category != nil {
+			if len(*req.Category) > 100 {
+				writeError(w, http.StatusBadRequest, "category must be 100 characters or fewer")
+				return
+			}
+			store.Tasks[i].Category = *req.Category
+		}
 		if req.EstimatedPomodoros != nil {
+			if *req.EstimatedPomodoros < 1 {
+				writeError(w, http.StatusBadRequest, "estimatedPomodoros must be at least 1")
+				return
+			}
 			store.Tasks[i].EstimatedPomodoros = *req.EstimatedPomodoros
 		}
 		if req.CompletedPomodoros != nil {
+			if *req.CompletedPomodoros < 0 {
+				writeError(w, http.StatusBadRequest, "completedPomodoros cannot be negative")
+				return
+			}
 			store.Tasks[i].CompletedPomodoros = *req.CompletedPomodoros
 		}
 		if req.Priority != nil {
+			if *req.Priority != "high" && *req.Priority != "medium" && *req.Priority != "low" {
+				writeError(w, http.StatusBadRequest, "priority must be high, medium, or low")
+				return
+			}
 			store.Tasks[i].Priority = *req.Priority
-		}
-		if req.Category != nil {
-			store.Tasks[i].Category = *req.Category
 		}
 		if req.Completed != nil {
 			store.Tasks[i].Completed = *req.Completed
 		}
 		if req.Order != nil {
+			if *req.Order < 0 {
+				writeError(w, http.StatusBadRequest, "order cannot be negative")
+				return
+			}
 			store.Tasks[i].Order = *req.Order
 		}
 		if req.SegmentMinutes != nil {
@@ -326,9 +377,12 @@ func putSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if s.PomodoroDuration < 1 || s.ShortBreak < 1 || s.LongBreak < 1 ||
-		s.WaterInterval < 1 || s.StretchInterval < 1 {
-		writeError(w, http.StatusBadRequest, "all durations must be at least 1 minute")
+	if s.PomodoroDuration < 1 || s.PomodoroDuration > 120 ||
+		s.ShortBreak < 1 || s.ShortBreak > 60 ||
+		s.LongBreak < 1 || s.LongBreak > 120 ||
+		s.WaterInterval < 1 || s.WaterInterval > 480 ||
+		s.StretchInterval < 1 || s.StretchInterval > 480 {
+		writeError(w, http.StatusBadRequest, "duration values out of allowed range")
 		return
 	}
 	mu.Lock()
@@ -349,6 +403,19 @@ func startSession(w http.ResponseWriter, r *http.Request) {
 	var req StartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	validSegTypes := map[string]bool{"focus": true, "short_break": true, "long_break": true}
+	if !validSegTypes[req.SegmentType] {
+		writeError(w, http.StatusBadRequest, "segmentType must be focus, short_break, or long_break")
+		return
+	}
+	if req.SegmentIndex < 0 || req.SegmentIndex > 7 {
+		writeError(w, http.StatusBadRequest, "segmentIndex must be between 0 and 7")
+		return
+	}
+	if req.PomodoroCount < 0 {
+		writeError(w, http.StatusBadRequest, "pomodoroCount cannot be negative")
 		return
 	}
 	now := time.Now()
@@ -423,6 +490,13 @@ func updateTotals(w http.ResponseWriter, r *http.Request) {
 // ---- Main -------------------------------------------------------------------
 
 func main() {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatalf("os.Executable: %v", err)
+	}
+	dataDir  = filepath.Join(filepath.Dir(exe), "data")
+	stateFile = filepath.Join(dataDir, "state.json")
+
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		log.Fatalf("create data dir: %v", err)
 	}
@@ -463,15 +537,15 @@ func main() {
 	url := fmt.Sprintf("http://127.0.0.1:%d", port)
 
 	// Start HTTP server in background
+	ready := make(chan struct{})
 	go func() {
+		close(ready)
 		log.Printf("Listening on %s", url)
 		if err := http.Serve(ln, corsMiddleware(mux)); err != nil {
 			log.Printf("server: %v", err)
 		}
 	}()
-
-	// Give the server a moment to bind
-	time.Sleep(100 * time.Millisecond)
+	<-ready
 
 	// Open native desktop window
 	w := webview.NewWithOptions(webview.WebViewOptions{
