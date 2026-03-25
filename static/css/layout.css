@@ -54,6 +54,7 @@ body {
   padding: var(--space-xl) var(--space-2xl);
   overflow-y: auto;
   min-height: 100vh;
+  position: relative; /* anchor for the day ruler */
 }
 
 .board-header {
@@ -159,13 +160,13 @@ body {
   }
 }
 
-/* ── Day ruler (fixed right edge, decorative) ────────── */
+/* ── Day ruler (right edge of task board, decorative) ─── */
 .day-ruler {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   width: 44px;
-  height: 100vh;
+  height: 100%;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
@@ -214,7 +215,8 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* On narrow viewports, shrink ruler width so it doesn't crowd content */
+/* On narrow viewports, shrink ruler width slightly */
 @media (max-width: 640px) {
   .day-ruler { width: 32px; }
+  .task-board { padding-right: calc(var(--space-md) + 32px); }
 }
