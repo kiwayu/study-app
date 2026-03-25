@@ -32,7 +32,7 @@ export const THEMES = [
 const STORAGE_KEY      = 'study-app-theme';
 const LAST_DARK_KEY    = 'study-app-last-dark';
 const LAST_LIGHT_KEY   = 'study-app-last-light';
-const DEFAULT_THEME_ID = 'serika-dark';
+const DEFAULT_THEME_ID = 'nord';
 
 /** Apply a theme by ID and persist the choice. */
 export function setTheme(id) {
@@ -84,7 +84,7 @@ export function initTheme() {
     const currentId  = document.documentElement.getAttribute('data-theme') ?? DEFAULT_THEME_ID;
     const current    = THEMES.find(t => t.id === currentId) ?? THEMES[0];
     const nextId     = current.dark
-      ? (localStorage.getItem(LAST_LIGHT_KEY) ?? 'serika-light')
+      ? (localStorage.getItem(LAST_LIGHT_KEY) ?? 'base')
       : (localStorage.getItem(LAST_DARK_KEY)  ?? DEFAULT_THEME_ID);
     setTheme(nextId);
   });

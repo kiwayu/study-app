@@ -715,7 +715,7 @@
 
 .stats-body {
   flex: 1;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: var(--space-md) var(--space-lg);
 }
@@ -730,6 +730,9 @@
   display: flex;
   gap: 4px;
   align-items: flex-start;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--space-xs); /* room for scrollbar */
 }
 
 .hm-month-row {
@@ -841,4 +844,20 @@
 #stats-view-month.is-active {
   color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+/* ── Heatmap: mobile adjustments ────────────────────────── */
+@media (max-width: 640px) {
+  .stats-panel { max-height: 65vh; }
+
+  /* Smaller cells so the year grid fits better in scroll view */
+  .hm-cell { width: 9px; height: 9px; }
+  .hm-day-labels { grid-template-rows: repeat(7, 9px); }
+  .hm-grid { grid-template-rows: repeat(7, 9px); }
+
+  /* Month calendar fills full width */
+  .hm-cal-grid { max-width: 100%; }
+
+  /* Stats body padding reduced on small screens */
+  .stats-body { padding: var(--space-sm) var(--space-md); }
 }

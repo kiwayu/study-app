@@ -214,7 +214,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* Hide ruler on narrow viewports where space is tight */
+/* On narrow viewports, shrink ruler width so it doesn't crowd content */
 @media (max-width: 640px) {
-  .day-ruler { display: none; }
+  .day-ruler { width: 32px; }
 }
