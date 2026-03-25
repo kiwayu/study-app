@@ -118,6 +118,10 @@
 }
 .btn-icon:hover { color: var(--color-text); background: var(--color-border); }
 
+#pin-btn.is-pinned {
+  color: var(--color-accent);
+}
+
 .btn-ghost {
   background: none;
   border: none;

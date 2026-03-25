@@ -12,6 +12,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"syscall"
 	"time"
 
 	webview "github.com/jchv/go-webview2"
@@ -476,6 +477,32 @@ func main() {
 		},
 	})
 	defer w.Destroy()
+
+	// Get the native window handle
+	hwnd := uintptr(w.Window())
+
+	// Load SetWindowPos from user32
+	user32 := syscall.NewLazyDLL("user32.dll")
+	setWindowPos := user32.NewProc("SetWindowPos")
+
+	const (
+		hwndTopmost    = ^uintptr(0)     // (HWND)-1
+		hwndNotTopmost = ^uintptr(0) - 1 // (HWND)-2
+		swpNoMove      = 0x0002
+		swpNoSize      = 0x0001
+	)
+
+	alwaysOnTop := false
+	w.Bind("goToggleAlwaysOnTop", func() error {
+		alwaysOnTop = !alwaysOnTop
+		insertAfter := hwndNotTopmost
+		if alwaysOnTop {
+			insertAfter = hwndTopmost
+		}
+		setWindowPos.Call(hwnd, insertAfter, 0, 0, 0, 0, swpNoMove|swpNoSize)
+		return nil
+	})
+
 	w.SetSize(393, 852, webview.HintNone)
 	w.Navigate(url)
 	w.Run()
