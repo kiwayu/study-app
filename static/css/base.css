@@ -23,8 +23,8 @@
   --color-info-bg: #1e3a5f33;
 
   /* Typography */
-  --font-display: 'Instrument Serif', serif;
-  --font-ui: 'DM Sans', sans-serif;
+  --font-display: 'Open Sans', sans-serif;
+  --font-ui: 'Open Sans', sans-serif;
 
   /* Spacing */
   --space-xs:  4px;
@@ -77,3 +77,23 @@ html {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #d4d4d8; }
+
+[data-theme="light"] {
+  --color-bg:      #f4f4f5;
+  --color-surface: #ffffff;
+  --color-border:  #e4e4e7;
+  --color-muted:   #71717a;
+  --color-text:    #18181b;
+  --color-accent:  #7C9E87;
+  --color-accent-dim: #5a7a65;
+  --color-danger:  #dc2626;
+  --color-high:    #dc2626;
+  --color-medium:  #ea580c;
+  --color-low:     #71717a;
+  --color-success-bg: #dcfce7;
+  --color-info-bg:    #dbeafe;
+  --shadow-card: 0 32px 80px rgba(0,0,0,0.12);
+  --shadow-drag: 0 16px 40px rgba(0,0,0,0.10);
+}
