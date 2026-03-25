@@ -33,6 +33,7 @@ let currentSession  = null;
 let currentSettings = null;
 let lastWaterAt     = 0;
 let lastStretchAt   = 0;
+let _segmentTransitioning = false;
 
 // ── Modules ──────────────────────────────────────────────────
 
@@ -130,8 +131,12 @@ function scheduleTotalsUpdate(totalElapsed) {
   if (totalsTimer) return;
   totalsTimer = setTimeout(async () => {
     totalsTimer = null;
-    const { data } = await updateTotals({ totalElapsed, lastWaterAt, lastStretchAt });
-    if (data) currentSession = data;
+    try {
+      const { data } = await updateTotals({ totalElapsed, lastWaterAt, lastStretchAt });
+      if (data) currentSession = data;
+    } catch (err) {
+      console.error('totals sync failed:', err);
+    }
   }, 1000);
 }
 
@@ -156,6 +161,10 @@ timer.ontick = (remainingMs, progress) => {
 };
 
 timer.onsegmentend = async () => {
+  if (!currentSession) { timer.reset(); return; }
+  if (_segmentTransitioning) return;
+  _segmentTransitioning = true;
+
   const oldIdx   = currentSession.segmentIndex;
   const newIdx   = (oldIdx + 1) % 8;
   const newType  = SEGMENT_SEQUENCE[newIdx];
@@ -171,21 +180,25 @@ timer.onsegmentend = async () => {
     showToast('Break over \u2014 back to work!', 'success');
   }
 
-  const { data } = await startSession({
-    segmentType: newType, segmentIndex: newIdx, pomodoroCount: newCount,
-  });
-  if (data) {
-    currentSession = data;
-    lastWaterAt    = data.lastWaterAt;
-    lastStretchAt  = data.lastStretchAt;
-  }
+  try {
+    const { data } = await startSession({
+      segmentType: newType, segmentIndex: newIdx, pomodoroCount: newCount,
+    });
+    if (data) {
+      currentSession = data;
+      lastWaterAt    = data.lastWaterAt;
+      lastStretchAt  = data.lastStretchAt;
+    }
 
-  timer.newSegment(newType, currentSettings);
-  timer.start();
-  setSegmentLabel(newType);
-  setPomodoroCount(newCount);
-  triggerSegmentPulse();
-  setControlState('running');
+    timer.newSegment(newType, currentSettings);
+    timer.start();
+    setSegmentLabel(newType);
+    setPomodoroCount(newCount);
+    triggerSegmentPulse();
+    setControlState('running');
+  } finally {
+    _segmentTransitioning = false;
+  }
 };
 
 // ── Control buttons ──────────────────────────────────────────

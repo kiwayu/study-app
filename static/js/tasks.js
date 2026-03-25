@@ -64,7 +64,7 @@ export class TaskManager {
     const pri = { high: 0, medium: 1, low: 2 };
     this._tasks.sort((a, b) =>
       a.estimatedPomodoros !== b.estimatedPomodoros
-        ? a.estimatedPomodoros - b.estimatedPomodoros
+        ? b.estimatedPomodoros - a.estimatedPomodoros
         : pri[a.priority] - pri[b.priority]
     );
     await this._reindex();
@@ -195,6 +195,7 @@ export class TaskManager {
     };
     const cancel = () => {
       if (done) return; done = true;
+      input.removeEventListener('blur', save);
       const newSpan = makeSpan('task-title', orig);
       newSpan.addEventListener('click', e => this._editTitle(e.currentTarget, id));
       input.replaceWith(newSpan);
@@ -244,6 +245,7 @@ export class TaskManager {
     };
     const cancel = () => {
       if (done) return; done = true;
+      input.removeEventListener('blur', save);
       const newBadge = makeSpan('task-pomodoros', `×${orig}`);
       newBadge.addEventListener('click', e => this._editPomodoros(e.currentTarget, id));
       input.replaceWith(newBadge);
@@ -303,6 +305,8 @@ export class TaskManager {
   }
 
   _deleteTask(id, el) {
+    if (el.dataset.deleting) return;       // prevent double-click
+    el.dataset.deleting = 'true';
     el.classList.add('is-deleting');
     el.addEventListener('animationend', async () => {
       const { error } = await deleteTask(id);
@@ -310,6 +314,10 @@ export class TaskManager {
         this._tasks = this._tasks.filter(t => t.id !== id);
         el.remove();
         if (this.onchange) this.onchange([...this._tasks]);
+      } else {
+        // restore card visibility on failure
+        delete el.dataset.deleting;
+        el.classList.remove('is-deleting');
       }
     }, { once: true });
   }
@@ -335,6 +343,7 @@ export class TaskManager {
     this._dropOccurred = true;
     this._el.querySelectorAll('.task-card').forEach(c => c.classList.remove('is-drop-target'));
     if (this._dragSrcIdx === targetIdx) return;
+    if (this._dragSrcIdx < 0 || this._dragSrcIdx >= this._tasks.length) return;
 
     const [moved] = this._tasks.splice(this._dragSrcIdx, 1);
     this._tasks.splice(targetIdx, 0, moved);
@@ -393,7 +402,7 @@ export class TaskManager {
       cleanup();
       ghost.remove();
       this._el.querySelectorAll('.task-card').forEach(c => c.classList.remove('is-drop-target'));
-      if (dropIdx !== srcIdx) {
+      if (dropIdx !== srcIdx && srcIdx >= 0 && srcIdx < this._tasks.length) {
         const [moved] = this._tasks.splice(srcIdx, 1);
         this._tasks.splice(dropIdx, 0, moved);
         await this._reindex();
@@ -445,7 +454,8 @@ function esc(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 }
 
 function makeSpan(cls, text) {
