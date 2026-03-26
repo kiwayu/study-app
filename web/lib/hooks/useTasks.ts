@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useReducer } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtime } from './useRealtime'
 import type { Task } from '@/lib/supabase/types'
@@ -29,6 +29,10 @@ function reducer(state: Task[], action: TaskAction): Task[] {
 export function useTasks(initialTasks: Task[], userId: string) {
   const [tasks, dispatch] = useReducer(reducer, initialTasks)
   const supabase = createClient()
+
+  // Stable ref — callbacks read from here instead of closing over `tasks`
+  const tasksRef = useRef(tasks)
+  useEffect(() => { tasksRef.current = tasks }, [tasks])
 
   // Real-time subscription — filtered to this user's rows only
   useRealtime<Record<string, unknown>>({
@@ -62,7 +66,7 @@ export function useTasks(initialTasks: Task[], userId: string) {
   }, [supabase, userId])
 
   const updateTask = useCallback(async (id: string, changes: Partial<Task>) => {
-    const prev = tasks.find(t => t.id === id)
+    const prev = tasksRef.current.find(t => t.id === id)
     if (!prev) return { error: 'Task not found' }
     dispatch({ type: 'UPDATE', task: { ...prev, ...changes } })
 
@@ -72,32 +76,35 @@ export function useTasks(initialTasks: Task[], userId: string) {
       return { error: error.message }
     }
     return {}
-  }, [supabase, tasks])
+  }, [supabase])
 
   const deleteTask = useCallback(async (id: string) => {
-    const prev = tasks.find(t => t.id === id)
+    const prev = tasksRef.current.find(t => t.id === id)
     if (!prev) return
     dispatch({ type: 'DELETE', id })
 
     const { error } = await supabase.from('tasks').delete().eq('id', id)
     if (error) {
       dispatch({ type: 'INSERT', task: prev }) // rollback
+      return { error: error.message }
     }
-  }, [supabase, tasks])
+    return {}
+  }, [supabase])
 
   const completeTask = useCallback(async (id: string) => {
-    const task = tasks.find(t => t.id === id)
+    const task = tasksRef.current.find(t => t.id === id)
     if (!task) return
     const now = new Date().toISOString()
-    await updateTask(id, { completed: true, completed_at: now })
-    // Record completion for stats
+    const result = await updateTask(id, { completed: true, completed_at: now })
+    if (result?.error) return
+    // Record completion for stats only if the update succeeded
     await supabase.from('completions').insert({
       user_id: userId,
       task_id: id,
       pomodoros_est: task.pomodoros_est,
       pomodoros_actual: task.pomodoros_done,
     })
-  }, [supabase, tasks, userId, updateTask])
+  }, [supabase, userId, updateTask])
 
   return { tasks, addTask, updateTask, deleteTask, completeTask }
 }
