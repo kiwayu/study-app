@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
@@ -12,7 +12,7 @@ interface UseRealtimeOptions<T extends Record<string, unknown>> {
   event?: ChangeEvent
   onInsert?: (row: T) => void
   onUpdate?: (row: T) => void
-  onDelete?: (row: T) => void
+  onDelete?: (row: Partial<T>) => void
 }
 
 export function useRealtime<T extends Record<string, unknown>>({
@@ -23,10 +23,23 @@ export function useRealtime<T extends Record<string, unknown>>({
   onUpdate,
   onDelete,
 }: UseRealtimeOptions<T>) {
+  // Stable refs for callbacks — updated every render but never trigger re-subscription
+  const onInsertRef = useRef(onInsert)
+  const onUpdateRef = useRef(onUpdate)
+  const onDeleteRef = useRef(onDelete)
+  useEffect(() => { onInsertRef.current = onInsert })
+  useEffect(() => { onUpdateRef.current = onUpdate })
+  useEffect(() => { onDeleteRef.current = onDelete })
+
+  // Stable unique channel name — generated once on mount
+  const channelNameRef = useRef(
+    `realtime:${table}:${event}:${filter ?? 'all'}:${Math.random().toString(36).slice(2)}`
+  )
+
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
-      .channel(`realtime:${table}`)
+      .channel(channelNameRef.current)
       .on(
         'postgres_changes',
         {
@@ -36,20 +49,21 @@ export function useRealtime<T extends Record<string, unknown>>({
           ...(filter ? { filter } : {}),
         },
         (payload: RealtimePostgresChangesPayload<T>) => {
-          if (payload.eventType === 'INSERT' && onInsert) {
-            onInsert(payload.new as T)
-          } else if (payload.eventType === 'UPDATE' && onUpdate) {
-            onUpdate(payload.new as T)
-          } else if (payload.eventType === 'DELETE' && onDelete) {
-            onDelete(payload.old as T)
+          if (payload.eventType === 'INSERT' && onInsertRef.current) {
+            onInsertRef.current(payload.new as T)
+          } else if (payload.eventType === 'UPDATE' && onUpdateRef.current) {
+            onUpdateRef.current(payload.new as T)
+          } else if (payload.eventType === 'DELETE' && onDeleteRef.current) {
+            onDeleteRef.current(payload.old as Partial<T>)
           }
         }
       )
       .subscribe()
 
-    // Cleanup: unsubscribe on unmount to prevent memory leaks and duplicate subscriptions
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [table, filter, event, onInsert, onUpdate, onDelete])
+  // table, filter, and event are stable identifiers — changing them creates a new subscription intentionally
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, filter, event])
 }
