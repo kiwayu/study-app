@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { TimerRing } from './TimerRing'
 import { useTimer } from '@/lib/hooks/useTimer'
 import type { Session, Settings } from '@/lib/supabase/types'
 
 interface TimerPanelProps {
-  initialSession: Session
+  session: Session
   settings: Settings
   onStart: (updates: Partial<Session>) => void
   onPause: (bankedMs: number) => void
@@ -15,13 +15,16 @@ interface TimerPanelProps {
 }
 
 export function TimerPanel({
-  initialSession,
+  session,
   settings,
   onStart,
   onPause,
   onStop,
   onSettingsOpen,
 }: TimerPanelProps) {
+  // Stable initial session for useTimer (only used on mount)
+  const initialSessionRef = useRef(session)
+
   const handleSegmentEnd = useCallback((newIndex: number, newType: string, newCount: number) => {
     onStart({
       segment_index: newIndex,
@@ -31,12 +34,13 @@ export function TimerPanel({
   }, [onStart])
 
   const { timerState, start, pause, reset, getCurrentElapsedMs } = useTimer(
-    initialSession,
+    initialSessionRef.current,
     settings,
     handleSegmentEnd
   )
 
-  const { status, segment_type, segment_index, pomodoro_count } = initialSession
+  // Live values from current session — drives button rendering and keyboard logic
+  const { status, segment_type, segment_index, pomodoro_count } = session
 
   const handleStart = useCallback(() => {
     start()
