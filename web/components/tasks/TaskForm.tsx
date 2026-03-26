@@ -18,7 +18,12 @@ export function TaskForm({ settings, onAdd }: TaskFormProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const title = titleRef.current?.value.trim() ?? ''
-    if (!title) return
+    if (!title) {
+      setError('Title is required')
+      titleRef.current?.focus()
+      return
+    }
+    setError(null)
 
     const result = await onAdd({
       title,

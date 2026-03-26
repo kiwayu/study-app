@@ -34,6 +34,7 @@ export function TaskBoard({ tasks, settings, onAdd, onUpdate, onDelete, onComple
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCompleted(v => !v)}
+            aria-pressed={showCompleted}
             className="text-xs text-[var(--color-muted)] hover:text-zinc-200 transition-colors"
           >
             {showCompleted ? 'Hide done' : 'Show done'}
@@ -77,7 +78,6 @@ export function TaskBoard({ tasks, settings, onAdd, onUpdate, onDelete, onComple
             <TaskCard
               key={task.id}
               task={task}
-              settings={settings}
               onUpdate={onUpdate}
               onDelete={onDelete}
               onComplete={onComplete}

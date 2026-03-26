@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { Task, Settings } from '@/lib/supabase/types'
+import type { Task } from '@/lib/supabase/types'
 
 interface TaskCardProps {
   task: Task
-  settings: Settings
   onUpdate: (id: string, changes: Partial<Task>) => void
   onDelete: (id: string) => void
   onComplete: (id: string) => void
@@ -17,8 +16,7 @@ const PRIORITY_DOT: Record<string, string> = {
   low:    'bg-zinc-500',
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function TaskCard({ task, settings: _settings, onUpdate, onDelete, onComplete }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, onDelete, onComplete }: TaskCardProps) {
   const [editing, setEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(task.title)
 
