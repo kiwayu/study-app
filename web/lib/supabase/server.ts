@@ -1,3 +1,5 @@
+// server.ts — must only be imported from Server Components, Route Handlers, and Server Actions.
+// Importing this file from a Client Component will cause a Next.js runtime error.
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -18,7 +20,9 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // setAll called from a Server Component — safe to ignore
+            // Next.js throws when cookies are set during Server Component rendering.
+            // This is expected — middleware is responsible for token refresh in that case.
+            // See: https://supabase.com/docs/guides/auth/server-side/nextjs
           }
         },
       },
