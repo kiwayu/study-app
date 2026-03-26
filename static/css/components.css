@@ -964,4 +964,18 @@
 .task-search-input { flex: 1; min-width: 120px; height: 30px; padding: 0 var(--space-sm); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: 13px; font-family: var(--font-ui); outline: none; }
 .task-search-input:focus { border-color: var(--color-accent); }
 .filter-select { height: 30px; padding: 0 var(--space-sm); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: 12px; font-family: var(--font-ui); cursor: pointer; outline: none; }
+
+/* ── Estimation accuracy view ── */
+.est-list { display: flex; flex-direction: column; gap: var(--space-md); }
+.est-item { display: flex; flex-direction: column; gap: 4px; }
+.est-title { font-size: 13px; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.est-bars { display: flex; gap: 4px; align-items: center; }
+.est-bar-wrap { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.est-bar { height: 6px; border-radius: 3px; min-width: 4px; transition: width 0.3s ease; }
+.est-bar.estimated { background: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)); }
+.est-bar.actual { background: var(--color-accent); }
+.est-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--color-muted); }
+.est-badge { font-size: 10px; padding: 1px 5px; border-radius: var(--radius-sm); font-weight: 600; }
+.est-badge.on-track { color: var(--color-success-bg); background: color-mix(in srgb, var(--color-success-bg) 15%, transparent); }
+.est-badge.over { color: var(--color-high); background: color-mix(in srgb, var(--color-high) 15%, transparent); }
 .task-empty-filter { padding: var(--space-lg); text-align: center; color: var(--color-muted); font-size: 13px; }

@@ -511,6 +511,51 @@ func updateTotals(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sess)
 }
 
+func getEstimationStats(w http.ResponseWriter, r *http.Request) {
+	mu.RLock()
+	tasks := make([]Task, len(store.Tasks))
+	copy(tasks, store.Tasks)
+	mu.RUnlock()
+
+	type EstItem struct {
+		Title       string `json:"title"`
+		Estimated   int    `json:"estimated"`
+		Actual      int    `json:"actual"`
+		CompletedAt string `json:"completedAt"`
+	}
+
+	var result []EstItem
+	for _, t := range tasks {
+		if !t.Completed || t.CompletedAt == nil {
+			continue
+		}
+		title := t.Title
+		if len([]rune(title)) > 40 {
+			runes := []rune(title)
+			title = string(runes[:40])
+		}
+		result = append(result, EstItem{
+			Title:       title,
+			Estimated:   t.EstimatedPomodoros,
+			Actual:      t.CompletedPomodoros,
+			CompletedAt: t.CompletedAt.Local().Format("2006-01-02"),
+		})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CompletedAt > result[j].CompletedAt
+	})
+
+	if len(result) > 50 {
+		result = result[:50]
+	}
+	if result == nil {
+		result = []EstItem{}
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
 func getCompletions(w http.ResponseWriter, r *http.Request) {
 	mu.RLock()
 	tasks := make([]Task, len(store.Tasks))
@@ -561,6 +606,7 @@ func main() {
 	mux.HandleFunc("POST /api/session/stop", stopSession)
 	mux.HandleFunc("PUT /api/session/totals", updateTotals)
 	mux.HandleFunc("GET /api/stats/completions", getCompletions)
+	mux.HandleFunc("GET /api/stats/estimation", getEstimationStats)
 
 	// Static files (catch-all)
 	subFS, err := fs.Sub(staticFiles, "static")

@@ -1,4 +1,4 @@
-import { getCompletions } from './api.js';
+import { getCompletions, getEstimationStats } from './api.js';
 
 /**
  * StatsPanel — GitHub-style task completion heatmap.
@@ -8,7 +8,7 @@ export class StatsPanel {
   constructor(panelEl, overlayEl) {
     this._panel   = panelEl;
     this._overlay = overlayEl;
-    this._view    = 'year'; // 'year' | 'month'
+    this._view    = 'year'; // 'year' | 'month' | 'est'
 
     this._panel.querySelector('[data-stats-close]')
       ?.addEventListener('click', () => this.close());
@@ -22,6 +22,8 @@ export class StatsPanel {
       ?.addEventListener('click', () => { this._view = 'year';  this._load(); });
     this._panel.querySelector('#stats-view-month')
       ?.addEventListener('click', () => { this._view = 'month'; this._load(); });
+    this._panel.querySelector('#stats-view-est')
+      ?.addEventListener('click', () => { this._view = 'est';   this._load(); });
   }
 
   async open() {
@@ -40,6 +42,24 @@ export class StatsPanel {
     if (!grid) return;
     grid.innerHTML = '<span class="stats-loading">Loading…</span>';
 
+    // Sync toggle button states
+    this._panel.querySelector('#stats-view-year')
+      ?.classList.toggle('is-active', this._view === 'year');
+    this._panel.querySelector('#stats-view-month')
+      ?.classList.toggle('is-active', this._view === 'month');
+    this._panel.querySelector('#stats-view-est')
+      ?.classList.toggle('is-active', this._view === 'est');
+
+    if (this._view === 'est') {
+      const { data, error } = await getEstimationStats();
+      if (error || !data) {
+        grid.innerHTML = '<span class="stats-loading">Could not load data.</span>';
+        return;
+      }
+      grid.innerHTML = _buildEstimation(data);
+      return;
+    }
+
     const { data, error } = await getCompletions();
     if (error || !data) {
       grid.innerHTML = '<span class="stats-loading">Could not load data.</span>';
@@ -49,12 +69,6 @@ export class StatsPanel {
     grid.innerHTML = this._view === 'year'
       ? _buildYear(data)
       : _buildMonth(data);
-
-    // Sync toggle button states
-    this._panel.querySelector('#stats-view-year')
-      ?.classList.toggle('is-active', this._view === 'year');
-    this._panel.querySelector('#stats-view-month')
-      ?.classList.toggle('is-active', this._view === 'month');
   }
 }
 
@@ -178,4 +192,47 @@ function _buildMonth(counts) {
 
 function _fmt(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/** Render estimation accuracy list. */
+function _buildEstimation(tasks) {
+  if (!tasks || tasks.length === 0) {
+    return '<p class="task-empty-filter">No completed tasks yet.</p>';
+  }
+
+  const maxVal = Math.max(1, ...tasks.map(t => Math.max(t.estimated, t.actual)));
+
+  const items = tasks.map(t => {
+    const estPct  = Math.round((t.estimated / maxVal) * 100);
+    const actPct  = Math.round((t.actual    / maxVal) * 100);
+    const over    = t.actual - t.estimated;
+    const badge   = over <= 0
+      ? `<span class="est-badge on-track">✓ on track</span>`
+      : `<span class="est-badge over">+${over} over</span>`;
+
+    return `
+      <div class="est-item">
+        <div class="est-title" title="${_escAttr(t.title)}">${_escHtml(t.title)}</div>
+        <div class="est-bars">
+          <div class="est-bar-wrap">
+            <div class="est-bar estimated" style="width:${estPct}%"></div>
+            <div class="est-bar actual"    style="width:${actPct}%"></div>
+          </div>
+        </div>
+        <div class="est-meta">
+          <span>Est ${t.estimated} · Got ${t.actual}</span>
+          ${badge}
+        </div>
+      </div>`;
+  }).join('');
+
+  return `<div class="est-list">${items}</div>`;
+}
+
+function _escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function _escAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 }
