@@ -1,4 +1,4 @@
-import { getCompletions, getEstimationStats } from './api.js';
+import { getCompletions, getEstimationStats, getNote } from './api.js';
 
 /**
  * StatsPanel — GitHub-style task completion heatmap.
@@ -8,7 +8,7 @@ export class StatsPanel {
   constructor(panelEl, overlayEl) {
     this._panel   = panelEl;
     this._overlay = overlayEl;
-    this._view    = 'year'; // 'year' | 'month' | 'est'
+    this._view    = 'year'; // 'year' | 'month' | 'est' | 'notes'
 
     this._panel.querySelector('[data-stats-close]')
       ?.addEventListener('click', () => this.close());
@@ -24,6 +24,8 @@ export class StatsPanel {
       ?.addEventListener('click', () => { this._view = 'month'; this._load(); });
     this._panel.querySelector('#stats-view-est')
       ?.addEventListener('click', () => { this._view = 'est';   this._load(); });
+    this._panel.querySelector('#stats-view-notes')
+      ?.addEventListener('click', () => { this._view = 'notes'; this._load(); });
   }
 
   async open() {
@@ -35,6 +37,19 @@ export class StatsPanel {
   close() {
     this._panel.classList.remove('is-open');
     this._overlay.classList.remove('is-open');
+  }
+
+  async _loadNotesView() {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    }
+    const results = await Promise.all(days.map(date => getNote(date)));
+    const notes = results
+      .map((r, i) => ({ date: days[i], text: r.data?.text ?? '' }))
+      .filter(n => n.text.trim() !== '');
+    return notes;
   }
 
   async _load() {
@@ -49,6 +64,14 @@ export class StatsPanel {
       ?.classList.toggle('is-active', this._view === 'month');
     this._panel.querySelector('#stats-view-est')
       ?.classList.toggle('is-active', this._view === 'est');
+    this._panel.querySelector('#stats-view-notes')
+      ?.classList.toggle('is-active', this._view === 'notes');
+
+    if (this._view === 'notes') {
+      const notes = await this._loadNotesView();
+      grid.innerHTML = _buildNotes(notes);
+      return;
+    }
 
     if (this._view === 'est') {
       const { data, error } = await getEstimationStats();
@@ -227,6 +250,18 @@ function _buildEstimation(tasks) {
   }).join('');
 
   return `<div class="est-list">${items}</div>`;
+}
+
+/** Render the 7-day notes history. */
+function _buildNotes(notes) {
+  if (!notes || notes.length === 0) {
+    return '<p class="task-empty-filter">No notes in the past 7 days.</p>';
+  }
+  return notes.map(n => `
+    <div class="note-entry">
+      <div class="note-date">${_escHtml(n.date)}</div>
+      <p class="note-text">${_escHtml(n.text)}</p>
+    </div>`).join('');
 }
 
 function _escHtml(s) {

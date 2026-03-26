@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,9 +64,10 @@ type SessionState struct {
 }
 
 type AppState struct {
-	Tasks    []Task       `json:"tasks"`
-	Settings Settings     `json:"settings"`
-	Session  SessionState `json:"session"`
+	Tasks    []Task            `json:"tasks"`
+	Settings Settings          `json:"settings"`
+	Session  SessionState      `json:"session"`
+	Notes    map[string]string `json:"notes"` // key = "YYYY-MM-DD", value = note text
 }
 
 // ---- Request types ----------------------------------------------------------
@@ -173,6 +175,9 @@ func loadState() {
 	}
 	if store.Tasks == nil {
 		store.Tasks = []Task{}
+	}
+	if store.Notes == nil {
+		store.Notes = map[string]string{}
 	}
 	sanitiseSettings(&store.Settings)
 }
@@ -572,6 +577,48 @@ func getCompletions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, counts)
 }
 
+// ---- Note handlers ----------------------------------------------------------
+
+var dateRe = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`)
+
+func getNote(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	date := parts[len(parts)-1]
+	if !dateRe.MatchString(date) {
+		writeError(w, http.StatusBadRequest, "invalid date format")
+		return
+	}
+	mu.RLock()
+	text := store.Notes[date]
+	mu.RUnlock()
+	writeJSON(w, http.StatusOK, map[string]string{"date": date, "text": text})
+}
+
+func upsertNote(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	date := parts[len(parts)-1]
+	if !dateRe.MatchString(date) {
+		writeError(w, http.StatusBadRequest, "invalid date format")
+		return
+	}
+	var body struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(body.Text) > 2000 {
+		writeError(w, http.StatusBadRequest, "text must be 2000 characters or fewer")
+		return
+	}
+	mu.Lock()
+	store.Notes[date] = body.Text
+	persistState()
+	mu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]string{"date": date, "text": body.Text})
+}
+
 // ---- Main -------------------------------------------------------------------
 
 func main() {
@@ -607,6 +654,18 @@ func main() {
 	mux.HandleFunc("PUT /api/session/totals", updateTotals)
 	mux.HandleFunc("GET /api/stats/completions", getCompletions)
 	mux.HandleFunc("GET /api/stats/estimation", getEstimationStats)
+
+	// Notes routes
+	mux.HandleFunc("/api/notes/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			getNote(w, r)
+		case http.MethodPut:
+			upsertNote(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Static files (catch-all)
 	subFS, err := fs.Sub(staticFiles, "static")

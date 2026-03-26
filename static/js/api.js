@@ -30,3 +30,5 @@ export const stopSession     = ()       => request('POST',   '/session/stop');
 export const updateTotals    = (body)   => request('PUT',    '/session/totals', body);
 export const getCompletions      = ()       => request('GET',    '/stats/completions');
 export const getEstimationStats  = ()       => request('GET',    '/stats/estimation');
+export const getNote    = (date) => request('GET', `/notes/${date}`);
+export const upsertNote = (date, text) => request('PUT', `/notes/${date}`, { text });

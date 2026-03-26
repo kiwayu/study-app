@@ -849,7 +849,9 @@
 
 /* View toggle active state */
 #stats-view-year.is-active,
-#stats-view-month.is-active {
+#stats-view-month.is-active,
+#stats-view-est.is-active,
+#stats-view-notes.is-active {
   color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
@@ -979,3 +981,64 @@
 .est-badge.on-track { color: var(--color-success-bg); background: color-mix(in srgb, var(--color-success-bg) 15%, transparent); }
 .est-badge.over { color: var(--color-high); background: color-mix(in srgb, var(--color-high) 15%, transparent); }
 .task-empty-filter { padding: var(--space-lg); text-align: center; color: var(--color-muted); font-size: 13px; }
+
+/* ── Session notes ─────────────────────────────────────── */
+.notes-section {
+  margin-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+.notes-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.notes-hint {
+  font-size: 11px;
+  color: var(--color-muted);
+  opacity: 0.6;
+}
+.notes-textarea {
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: var(--space-sm);
+  resize: vertical;
+  min-height: 72px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--duration-fast);
+}
+.notes-textarea:focus {
+  border-color: var(--color-accent);
+}
+/* Notes view in stats panel */
+.note-entry {
+  margin-bottom: var(--space-md);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-sm);
+}
+.note-date {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-bottom: 2px;
+}
+.note-text {
+  font-size: 13px;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

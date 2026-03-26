@@ -6,6 +6,7 @@ import { SettingsManager } from './settings.js';
 import { initTheme, buildThemePicker } from './theme.js';
 import { initDesktop } from './desktop.js';
 import { initRuler } from './ruler.js';
+import { NotesPanel } from './notes.js';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ const timer      = new TimerEngine();
 const tasks      = new TaskManager($('task-list'));
 const settings   = new SettingsManager($('settings-drawer'), $('settings-overlay'));
 const statsPanel = new StatsPanel($('stats-panel'), $('stats-overlay'));
+const notesPanel = new NotesPanel();
 
 // ── Timer display ────────────────────────────────────────────
 
@@ -305,6 +307,7 @@ async function init() {
   initTheme();
   initDesktop();
   initRuler();
+  notesPanel.init();
   buildThemePicker(document.getElementById('theme-grid'));
 
   const [tasksRes, sessionRes, settingsRes] = await Promise.all([

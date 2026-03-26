@@ -129,6 +129,14 @@
 
       <div class="task-list" id="task-list" role="list" aria-label="Task list"></div>
 
+      <div class="notes-section" id="notes-section">
+        <div class="notes-header">
+          <span class="notes-label">Today's notes</span>
+          <span class="notes-hint">Auto-saved</span>
+        </div>
+        <textarea id="session-notes" class="notes-textarea" placeholder="Jot down what you're working on…" maxlength="2000" rows="4" spellcheck="true"></textarea>
+      </div>
+
       <div id="day-ruler" class="day-ruler" aria-hidden="true"></div>
 
     </main>
@@ -205,6 +213,7 @@
         <button id="stats-view-year"  class="btn-ghost btn-sm is-active">Year</button>
         <button id="stats-view-month" class="btn-ghost btn-sm">Month</button>
         <button id="stats-view-est"   class="btn-ghost btn-sm">Accuracy</button>
+        <button id="stats-view-notes" class="btn-ghost btn-sm">Notes</button>
         <button class="btn-icon" data-stats-close aria-label="Close stats">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
