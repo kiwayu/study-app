@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { Settings } from '@/lib/supabase/types'
+import type { Settings, Priority } from '@/lib/supabase/types'
 
-interface Props { settings: Settings; onChange: (k: keyof Settings, v: unknown) => void }
+interface Props { settings: Settings; onChange: <K extends keyof Settings>(k: K, v: Settings[K]) => void }
 
 export function TaskDefaultsSettings({ settings, onChange }: Props) {
   const [newPreset, setNewPreset] = useState('')
@@ -26,7 +26,7 @@ export function TaskDefaultsSettings({ settings, onChange }: Props) {
       <div className="flex items-center justify-between">
         <label htmlFor="def-priority" className="text-sm text-zinc-300">Default priority</label>
         <select id="def-priority" value={settings.default_priority}
-          onChange={e => onChange('default_priority', e.target.value)}
+          onChange={e => onChange('default_priority', e.target.value as Priority)}
           className="rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-sm text-zinc-50 px-3 py-1.5 outline-none focus:border-[var(--color-accent)]"
         >
           <option value="high">High</option>
@@ -54,7 +54,7 @@ export function TaskDefaultsSettings({ settings, onChange }: Props) {
           ))}
         </div>
         <div className="flex gap-2">
-          <input value={newPreset} onChange={e => setNewPreset(e.target.value)}
+          <input aria-label="New category name" value={newPreset} onChange={e => setNewPreset(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addPreset()}
             placeholder="New category…"
             className="flex-1 rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-sm text-zinc-50 placeholder:text-[var(--color-muted)] px-3 py-1.5 outline-none focus:border-[var(--color-accent)]"

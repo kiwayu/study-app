@@ -1,6 +1,8 @@
+'use client'
+
 import type { Settings } from '@/lib/supabase/types'
 
-interface Props { settings: Settings; onChange: (k: keyof Settings, v: unknown) => void }
+interface Props { settings: Settings; onChange: <K extends keyof Settings>(k: K, v: Settings[K]) => void }
 
 export function NotificationSettings({ settings, onChange }: Props) {
   return (
@@ -11,6 +13,7 @@ export function NotificationSettings({ settings, onChange }: Props) {
         <div className="flex gap-2">
           {(['toast','native','silent'] as const).map(s => (
             <button key={s} onClick={() => onChange('notification_style', s)}
+              aria-pressed={settings.notification_style === s}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
                 settings.notification_style === s
                   ? 'bg-[var(--color-accent)] text-white'

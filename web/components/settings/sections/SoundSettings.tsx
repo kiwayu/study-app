@@ -1,6 +1,8 @@
-import type { Settings } from '@/lib/supabase/types'
+'use client'
 
-interface Props { settings: Settings; onChange: (k: keyof Settings, v: unknown) => void }
+import type { Settings, SoundPack } from '@/lib/supabase/types'
+
+interface Props { settings: Settings; onChange: <K extends keyof Settings>(k: K, v: Settings[K]) => void }
 
 export function SoundSettings({ settings, onChange }: Props) {
   return (
@@ -35,7 +37,7 @@ export function SoundSettings({ settings, onChange }: Props) {
           <div className="flex items-center justify-between">
             <label htmlFor="sound-pack" className="text-sm text-zinc-300">Sound pack</label>
             <select id="sound-pack" value={settings.sound_pack}
-              onChange={e => onChange('sound_pack', e.target.value)}
+              onChange={e => onChange('sound_pack', e.target.value as SoundPack)}
               className="rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-sm text-zinc-50 px-3 py-1.5 outline-none focus:border-[var(--color-accent)]"
             >
               <option value="mechanical">Mechanical</option>

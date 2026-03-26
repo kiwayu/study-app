@@ -30,7 +30,9 @@ export function SettingsDrawer({ initialSettings, isOpen, onClose, onSave }: Set
     if (isOpen) {
       setDraft(initialSettings)
       setError(null)
-      setTimeout(() => (firstInputRef.current?.querySelector('input,select,button') as HTMLElement | null)?.focus(), 50)
+      requestAnimationFrame(() => {
+        (firstInputRef.current?.querySelector('input,select,button') as HTMLElement | null)?.focus()
+      })
     }
   }, [isOpen, initialSettings])
 
@@ -44,21 +46,22 @@ export function SettingsDrawer({ initialSettings, isOpen, onClose, onSave }: Set
     return () => document.removeEventListener('keydown', onKey)
   }, [isOpen, onClose])
 
-  const handleChange = useCallback((key: keyof Settings, value: unknown) => {
+  const handleChange = useCallback(<K extends keyof Settings>(key: K, value: Settings[K]) => {
     setDraft(d => ({ ...d, [key]: value }))
   }, [])
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     setSaving(true)
     setError(null)
+    const snapshot = draft
     const { error } = await supabase
       .from('settings')
-      .upsert({ ...draft, updated_at: new Date().toISOString() })
+      .upsert({ ...snapshot, updated_at: new Date().toISOString() })
     setSaving(false)
     if (error) { setError(error.message); return }
-    onSave(draft)
+    onSave(snapshot)
     onClose()
-  }
+  }, [draft, supabase, onSave, onClose])
 
   return (
     <>
@@ -101,7 +104,7 @@ export function SettingsDrawer({ initialSettings, isOpen, onClose, onSave }: Set
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-[var(--color-border)] space-y-2">
-          {error && <p className="text-xs text-[var(--color-danger)]">{error}</p>}
+          {error && <p role="alert" className="text-xs text-[var(--color-danger)]">{error}</p>}
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 rounded-full bg-[var(--color-surface-2)] hover:bg-zinc-600 text-zinc-300 text-sm font-medium py-2.5 transition-colors">Cancel</button>
             <button onClick={handleSave} disabled={saving} className="flex-1 rounded-full bg-[var(--color-accent)] hover:bg-[var(--color-accent-dim)] disabled:opacity-50 text-white text-sm font-semibold py-2.5 transition-colors">

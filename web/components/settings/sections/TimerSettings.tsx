@@ -1,6 +1,8 @@
+'use client'
+
 import type { Settings } from '@/lib/supabase/types'
 
-interface Props { settings: Settings; onChange: (k: keyof Settings, v: unknown) => void }
+interface Props { settings: Settings; onChange: <K extends keyof Settings>(k: K, v: Settings[K]) => void }
 
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (

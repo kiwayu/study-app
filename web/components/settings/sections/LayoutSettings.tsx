@@ -1,6 +1,8 @@
+'use client'
+
 import type { Settings } from '@/lib/supabase/types'
 
-interface Props { settings: Settings; onChange: (k: keyof Settings, v: unknown) => void }
+interface Props { settings: Settings; onChange: <K extends keyof Settings>(k: K, v: Settings[K]) => void }
 
 export function LayoutSettings({ settings, onChange }: Props) {
   return (
@@ -12,6 +14,7 @@ export function LayoutSettings({ settings, onChange }: Props) {
         <div className="flex gap-2">
           {(['left','right'] as const).map(pos => (
             <button key={pos} onClick={() => onChange('sidebar_position', pos)}
+              aria-pressed={settings.sidebar_position === pos}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
                 settings.sidebar_position === pos
                   ? 'bg-[var(--color-accent)] text-white'
@@ -27,6 +30,7 @@ export function LayoutSettings({ settings, onChange }: Props) {
         <div className="flex gap-2">
           {(['compact','default','spacious'] as const).map(d => (
             <button key={d} onClick={() => onChange('panel_density', d)}
+              aria-pressed={settings.panel_density === d}
               className={`rounded-lg px-2.5 py-1.5 text-xs font-medium capitalize transition-colors ${
                 settings.panel_density === d
                   ? 'bg-[var(--color-accent)] text-white'

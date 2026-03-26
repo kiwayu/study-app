@@ -1,6 +1,8 @@
+'use client'
+
 import type { Settings } from '@/lib/supabase/types'
 
-interface Props { settings: Settings; onChange: (k: keyof Settings, v: unknown) => void }
+interface Props { settings: Settings; onChange: <K extends keyof Settings>(k: K, v: Settings[K]) => void }
 
 const THEMES = [
   { id: 'serika-dark',  name: 'Serika Dark',  dark: true,  hex: '#e2b714' },
@@ -26,6 +28,7 @@ export function AppearanceSettings({ settings, onChange }: Props) {
             <button
               key={m}
               onClick={() => onChange('dark_mode', m)}
+              aria-pressed={settings.dark_mode === m}
               className={`flex-1 rounded-lg py-2 text-xs font-medium capitalize transition-colors ${
                 settings.dark_mode === m
                   ? 'bg-[var(--color-accent)] text-white'
@@ -46,6 +49,8 @@ export function AppearanceSettings({ settings, onChange }: Props) {
               key={t.id}
               onClick={() => onChange('theme_id', t.id)}
               title={t.name}
+              aria-label={t.name}
+              aria-pressed={settings.theme_id === t.id}
               className={`relative aspect-square rounded-xl transition-all ${
                 settings.theme_id === t.id ? 'ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--color-bg)]' : ''
               }`}
