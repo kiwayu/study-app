@@ -1042,3 +1042,100 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── Login screen ───────────────────────────────────── */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  z-index: 100;
+}
+
+.login-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl) var(--space-xl);
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+
+.login-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-sm);
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: var(--color-muted);
+  margin-bottom: var(--space-xl);
+}
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.btn-oauth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 12px var(--space-md);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--duration-fast), transform var(--duration-fast);
+}
+.btn-oauth:active {
+  transform: scale(0.98);
+}
+.btn-oauth svg {
+  flex-shrink: 0;
+}
+
+.btn-google {
+  background: #fff;
+  color: #3c4043;
+}
+.btn-google:hover {
+  background: #f8f9fa;
+}
+
+.btn-github {
+  background: #24292e;
+  color: #fff;
+}
+.btn-github:hover {
+  background: #2f363d;
+}
+
+/* ── User profile (timer top row) ───────────────────── */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+}

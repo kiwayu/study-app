@@ -1,13 +1,40 @@
+import { tryRefresh, showLoginPage } from './auth.js';
+
 const BASE = '/api';
+
+let _refreshingFor401 = false;
 
 async function request(method, path, body) {
   try {
     const opts = {
       method,
+      credentials: 'same-origin',
       headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
       body: body !== undefined ? JSON.stringify(body) : undefined,
     };
-    const res = await fetch(BASE + path, opts);
+    let res = await fetch(BASE + path, opts);
+
+    // On 401, attempt a single token refresh then retry
+    if (res.status === 401 && !_refreshingFor401) {
+      _refreshingFor401 = true;
+      try {
+        const refreshed = await tryRefresh();
+        if (refreshed) {
+          res = await fetch(BASE + path, opts);
+        } else {
+          showLoginPage();
+          return { data: null, error: 'Not authenticated' };
+        }
+      } finally {
+        _refreshingFor401 = false;
+      }
+    }
+
+    if (res.status === 401) {
+      showLoginPage();
+      return { data: null, error: 'Not authenticated' };
+    }
+
     if (res.status === 204) return { data: null, error: null };
     const json = await res.json();
     if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` };
