@@ -754,9 +754,13 @@ func runWebMode(portOverride string) {
 	}
 	mux.Handle("/", http.FileServer(http.FS(subFS)))
 
-	// Middleware stack.
+	// Middleware stack: SecurityHeaders → RateLimit → CORS → CSRF → routes
+	secureCookie := cfg.Env == "production"
+	csrfMiddleware := middleware.CSRFProtect(secureCookie)
 	corsMiddleware := middleware.CORS([]string{cfg.BaseURL})
-	handler := middleware.Logging(corsMiddleware(mux))
+	rateLimitMiddleware := middleware.RateLimit(cfg.RateLimit, cfg.RateBurst)
+	securityHeaders := middleware.SecurityHeaders()
+	handler := middleware.Logging(securityHeaders(rateLimitMiddleware(corsMiddleware(csrfMiddleware(mux)))))
 
 	addr := ":" + cfg.Port
 	log.Printf("Web mode: listening on %s", addr)
