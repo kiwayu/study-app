@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -104,14 +105,14 @@ func (r *TaskRepo) Update(ctx context.Context, userID, taskID string, fields map
 	}
 
 	// Always bump updated_at.
-	setClauses = append(setClauses, fmt.Sprintf("updated_at = now()"))
+	setClauses = append(setClauses, "updated_at = now()")
 
 	query := fmt.Sprintf(
 		`UPDATE tasks SET %s WHERE id = $%d AND user_id = $%d
 		 RETURNING id, user_id, title, estimated_pomodoros, completed_pomodoros,
 		           priority, category, completed, completed_at, "order",
 		           segment_minutes, created_at, updated_at`,
-		joinStrings(setClauses, ", "), argIdx, argIdx+1,
+		strings.Join(setClauses, ", "), argIdx, argIdx+1,
 	)
 	args = append(args, taskID, userID)
 
@@ -145,13 +146,3 @@ func (r *TaskRepo) Delete(ctx context.Context, userID, taskID string) error {
 	return nil
 }
 
-func joinStrings(ss []string, sep string) string {
-	result := ""
-	for i, s := range ss {
-		if i > 0 {
-			result += sep
-		}
-		result += s
-	}
-	return result
-}
