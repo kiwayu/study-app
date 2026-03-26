@@ -171,7 +171,7 @@ func (h *AuthHandler) CallbackGitHub(w http.ResponseWriter, r *http.Request) {
 
 	email := ghUser.Email
 	if email == "" {
-		email, err = h.fetchGitHubPrimaryEmail(r, client)
+		email, err = h.fetchGitHubPrimaryEmail(client)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to fetch GitHub email")
 			return
@@ -287,7 +287,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"id":        user.ID,
 		"email":     user.Email,
 		"name":      user.Name,
@@ -389,7 +389,7 @@ func (h *AuthHandler) issueTokensAndRedirect(w http.ResponseWriter, r *http.Requ
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func (h *AuthHandler) fetchGitHubPrimaryEmail(r *http.Request, client *http.Client) (string, error) {
+func (h *AuthHandler) fetchGitHubPrimaryEmail(client *http.Client) (string, error) {
 	resp, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
 		return "", err
