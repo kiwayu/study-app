@@ -365,3 +365,103 @@ document.addEventListener('visibilitychange', async () => {
 });
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ── Keyboard shortcuts ────────────────────────────────────
+
+const kbHelpBtn   = $('kb-help-btn');
+const kbHelpPanel = $('kb-help-panel');
+
+function isTypingTarget(el) {
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+    el.isContentEditable;
+}
+
+function kbHelpOpen() {
+  kbHelpPanel.classList.add('is-open');
+  kbHelpPanel.setAttribute('aria-hidden', 'false');
+}
+
+function kbHelpClose() {
+  kbHelpPanel.classList.remove('is-open');
+  kbHelpPanel.setAttribute('aria-hidden', 'true');
+}
+
+function kbHelpToggle() {
+  if (kbHelpPanel.classList.contains('is-open')) {
+    kbHelpClose();
+  } else {
+    kbHelpOpen();
+  }
+}
+
+kbHelpBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  kbHelpToggle();
+});
+
+document.addEventListener('click', e => {
+  if (kbHelpPanel.classList.contains('is-open') &&
+      !kbHelpPanel.contains(e.target) &&
+      e.target !== kbHelpBtn) {
+    kbHelpClose();
+  }
+});
+
+document.addEventListener('keydown', e => {
+  const typing = isTypingTarget(e.target);
+
+  // Space — start / pause / resume (not when typing in an input)
+  if (e.key === ' ' && !typing) {
+    e.preventDefault();
+    const status = currentSession?.status ?? 'idle';
+    if (status === 'running') {
+      pauseBtn.click();
+    } else {
+      startBtn.click();
+    }
+    return;
+  }
+
+  // Escape — close panels / stop timer
+  if (e.key === 'Escape') {
+    if (kbHelpPanel.classList.contains('is-open')) {
+      kbHelpClose();
+      return;
+    }
+    if ($('settings-drawer').classList.contains('is-open')) {
+      settings.close();
+      return;
+    }
+    if ($('stats-panel').classList.contains('is-open')) {
+      statsPanel.close();
+      return;
+    }
+    if (!typing) {
+      const status = currentSession?.status ?? 'idle';
+      if (status === 'running' || status === 'paused') {
+        stopBtn.click();
+      }
+    }
+    return;
+  }
+
+  // Ctrl shortcuts
+  if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+    if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      document.getElementById('new-task-title')?.focus();
+      return;
+    }
+    if (e.key === '/') {
+      e.preventDefault();
+      kbHelpToggle();
+      return;
+    }
+    if (e.key === ',') {
+      e.preventDefault();
+      settings.open();
+      return;
+    }
+  }
+});

@@ -869,3 +869,92 @@
   /* Stats body padding reduced on small screens */
   .stats-body { padding: var(--space-sm) var(--space-md); }
 }
+
+/* ── Keyboard shortcut help ──────────────────────────────── */
+
+.kb-help-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.kb-help-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.kb-help-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-muted) 8%, transparent);
+}
+
+.kb-help-panel {
+  position: absolute;
+  bottom: calc(100% - var(--space-sm));
+  left: var(--space-md);
+  max-width: 220px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-sm) var(--space-md);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+  z-index: var(--z-drawer);
+}
+
+.kb-help-panel.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.kb-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.kb-table td {
+  padding: 3px 0;
+  vertical-align: middle;
+}
+
+.kb-table td:first-child {
+  padding-right: var(--space-sm);
+  white-space: nowrap;
+}
+
+.kb-table td:last-child {
+  color: var(--color-muted);
+}
+
+.kb-table kbd {
+  display: inline-block;
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  color: var(--color-text);
+  white-space: nowrap;
+}
