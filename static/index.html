@@ -91,6 +91,17 @@
           </button>
         </div>
 
+        <div class="task-filter-row">
+          <input type="search" id="task-search" placeholder="Search tasks…" class="task-search-input">
+          <select id="filter-priority" class="filter-select">
+            <option value="">All priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <button id="filter-done-btn" class="btn-ghost btn-sm">Hide done</button>
+        </div>
+
         <form class="quick-add-form" id="add-task-form" novalidate>
           <input
             type="text"

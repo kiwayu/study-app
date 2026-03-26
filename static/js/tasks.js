@@ -10,6 +10,7 @@ export class TaskManager {
     this._dragSrcIdx   = null;
     this._dropOccurred = false;
     this._settings = null;
+    this._filters  = { search: '', priority: '', hideDone: false };
 
     /** @type {(tasks: object[]) => void} */
     this.onchange = null;
@@ -18,6 +19,7 @@ export class TaskManager {
   init(tasks, settings = null) {
     this._settings = settings;
     this._tasks = [...tasks].sort((a, b) => a.order - b.order);
+    this._initFilters();
     this._render();
   }
 
@@ -47,11 +49,62 @@ export class TaskManager {
     this._render();
   }
 
+  // ── Filters ──────────────────────────────────────────────────
+
+  _applyFilters() {
+    const { search, priority, hideDone } = this._filters;
+    const q = search.trim().toLowerCase();
+    return this._tasks.filter(task => {
+      if (hideDone && task.completed === true) return false;
+      if (priority && task.priority !== priority) return false;
+      if (q) {
+        const inTitle    = task.title.toLowerCase().includes(q);
+        const inCategory = task.category ? task.category.toLowerCase().includes(q) : false;
+        if (!inTitle && !inCategory) return false;
+      }
+      return true;
+    });
+  }
+
+  _initFilters() {
+    const searchEl   = document.getElementById('task-search');
+    const priorityEl = document.getElementById('filter-priority');
+    const doneBtn    = document.getElementById('filter-done-btn');
+
+    if (!searchEl || !priorityEl || !doneBtn) return;
+
+    searchEl.addEventListener('input', () => {
+      this._filters.search = searchEl.value;
+      this._render();
+    });
+
+    priorityEl.addEventListener('change', () => {
+      this._filters.priority = priorityEl.value;
+      this._render();
+    });
+
+    doneBtn.addEventListener('click', () => {
+      this._filters.hideDone = !this._filters.hideDone;
+      doneBtn.textContent = this._filters.hideDone ? 'Show done' : 'Hide done';
+      this._render();
+    });
+  }
+
   // ── Render ───────────────────────────────────────────────────
 
   _render() {
     this._el.innerHTML = '';
-    this._tasks.forEach((task, idx) => {
+    const visible = this._applyFilters();
+    if (visible.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'task-empty-filter';
+      const hasFilter = this._filters.search || this._filters.priority || this._filters.hideDone;
+      empty.textContent = hasFilter ? 'No tasks match your filters.' : 'No tasks yet.';
+      this._el.appendChild(empty);
+      return;
+    }
+    visible.forEach((task) => {
+      const idx = this._tasks.indexOf(task);
       this._el.appendChild(this._buildCard(task, idx));
     });
   }
