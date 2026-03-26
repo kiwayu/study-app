@@ -53,8 +53,7 @@ export function SettingsDrawer({ initialSettings, isOpen, onClose, onSave }: Set
     setError(null)
     const { error } = await supabase
       .from('settings')
-      .update({ ...draft, updated_at: new Date().toISOString() })
-      .eq('user_id', draft.user_id)
+      .upsert({ ...draft, updated_at: new Date().toISOString() })
     setSaving(false)
     if (error) { setError(error.message); return }
     onSave(draft)
