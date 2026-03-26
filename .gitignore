@@ -13,3 +13,6 @@ data/
 # Claude settings
 .claude/
 docs/
+
+# Git worktrees
+.worktrees/
