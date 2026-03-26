@@ -1,0 +1,38 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: studysession
+      POSTGRES_PASSWORD: studysession
+      POSTGRES_DB: studysession
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studysession"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://studysession:studysession@db:5432/studysession?sslmode=disable
+      JWT_SECRET: change-me-in-production
+      BASE_URL: http://localhost:8080
+      PORT: "8080"
+      ENV: development
+    # NOTE: env_file will cause an error if .env does not exist.
+    # Comment this out or create an empty .env file if you don't need local overrides.
+    # env_file:
+    #   - .env
+
+volumes:
+  pgdata:

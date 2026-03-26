@@ -1,13 +1,56 @@
+import { tryRefresh, showLoginPage } from './auth.js';
+
 const BASE = '/api';
+
+let _refreshingFor401 = false;
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 async function request(method, path, body) {
   try {
+    const headers = {};
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+    // Include CSRF token on state-changing requests.
+    if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+      const csrfToken = getCookie('csrf_token');
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
     const opts = {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+      credentials: 'same-origin',
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     };
-    const res = await fetch(BASE + path, opts);
+    let res = await fetch(BASE + path, opts);
+
+    // On 401, attempt a single token refresh then retry
+    if (res.status === 401 && !_refreshingFor401) {
+      _refreshingFor401 = true;
+      try {
+        const refreshed = await tryRefresh();
+        if (refreshed) {
+          res = await fetch(BASE + path, opts);
+        } else {
+          showLoginPage();
+          return { data: null, error: 'Not authenticated' };
+        }
+      } finally {
+        _refreshingFor401 = false;
+      }
+    }
+
+    if (res.status === 401) {
+      showLoginPage();
+      return { data: null, error: 'Not authenticated' };
+    }
+
     if (res.status === 204) return { data: null, error: null };
     const json = await res.json();
     if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` };

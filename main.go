@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"embed"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -22,39 +26,44 @@ import (
 	"unsafe"
 
 	webview "github.com/jchv/go-webview2"
-)
 
+	"studysession/auth"
+	"studysession/config"
+	"studysession/db"
+	"studysession/handlers"
+	"studysession/middleware"
+)
 
 //go:embed static
 var staticFiles embed.FS
 
-// ---- Structs ----------------------------------------------------------------
+// ---- Desktop-mode structs (JSON persistence) --------------------------------
 
 type Task struct {
-	ID                 string `json:"id"`
-	Title              string `json:"title"`
-	EstimatedPomodoros int    `json:"estimatedPomodoros"`
-	CompletedPomodoros int    `json:"completedPomodoros"`
-	Priority           string `json:"priority"` // "high" | "medium" | "low"
-	Category           string `json:"category"`
+	ID                 string     `json:"id"`
+	Title              string     `json:"title"`
+	EstimatedPomodoros int        `json:"estimatedPomodoros"`
+	CompletedPomodoros int        `json:"completedPomodoros"`
+	Priority           string     `json:"priority"`
+	Category           string     `json:"category"`
 	Completed          bool       `json:"completed"`
 	CompletedAt        *time.Time `json:"completedAt,omitempty"`
 	Order              int        `json:"order"`
-	SegmentMinutes     int    `json:"segmentMinutes"`    // 0 = use global pomodoroDuration
+	SegmentMinutes     int        `json:"segmentMinutes"`
 }
 
 type Settings struct {
-	PomodoroDuration int `json:"pomodoroDuration"` // minutes
-	ShortBreak       int `json:"shortBreak"`        // minutes
-	LongBreak        int `json:"longBreak"`          // minutes
-	WaterInterval    int `json:"waterInterval"`      // minutes
-	StretchInterval  int `json:"stretchInterval"`    // minutes
+	PomodoroDuration int `json:"pomodoroDuration"`
+	ShortBreak       int `json:"shortBreak"`
+	LongBreak        int `json:"longBreak"`
+	WaterInterval    int `json:"waterInterval"`
+	StretchInterval  int `json:"stretchInterval"`
 }
 
 type SessionState struct {
-	Status         string     `json:"status"`         // "idle" | "running" | "paused"
-	SegmentType    string     `json:"segmentType"`    // "focus" | "short_break" | "long_break"
-	SegmentIndex   int        `json:"segmentIndex"`   // 0–7, wraps at 8
+	Status         string     `json:"status"`
+	SegmentType    string     `json:"segmentType"`
+	SegmentIndex   int        `json:"segmentIndex"`
 	PomodoroCount  int        `json:"pomodoroCount"`
 	StartedAt      *time.Time `json:"startedAt"`
 	ElapsedSeconds float64    `json:"elapsedSeconds"`
@@ -67,10 +76,10 @@ type AppState struct {
 	Tasks    []Task            `json:"tasks"`
 	Settings Settings          `json:"settings"`
 	Session  SessionState      `json:"session"`
-	Notes    map[string]string `json:"notes"` // key = "YYYY-MM-DD", value = note text
+	Notes    map[string]string `json:"notes"`
 }
 
-// ---- Request types ----------------------------------------------------------
+// ---- Desktop-mode request types ---------------------------------------------
 
 type CreateTaskRequest struct {
 	Title              string `json:"title"`
@@ -103,7 +112,7 @@ type TotalsRequest struct {
 	LastStretchAt float64 `json:"lastStretchAt"`
 }
 
-// ---- Global store -----------------------------------------------------------
+// ---- Global store (desktop mode) --------------------------------------------
 
 var (
 	mu        sync.RWMutex
@@ -129,7 +138,6 @@ func defaultState() AppState {
 	}
 }
 
-// hexToCOLORREF converts "#rrggbb" to a Win32 COLORREF (0x00BBGGRR).
 func hexToCOLORREF(hex string) uint32 {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
@@ -141,7 +149,6 @@ func hexToCOLORREF(hex string) uint32 {
 	return uint32(r) | uint32(g)<<8 | uint32(b)<<16
 }
 
-// sanitiseSettings resets any out-of-range settings values to their defaults.
 func sanitiseSettings(s *Settings) {
 	def := defaultState().Settings
 	if s.PomodoroDuration < 1 || s.PomodoroDuration > 120 { s.PomodoroDuration = def.PomodoroDuration }
@@ -156,8 +163,8 @@ func generateID() string {
 	if _, err := rand.Read(b); err != nil {
 		log.Fatalf("rand.Read: %v", err)
 	}
-	b[6] = (b[6] & 0x0f) | 0x40 // version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // variant bits
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
@@ -166,7 +173,7 @@ func loadState() {
 	store = defaultState()
 	data, err := os.ReadFile(stateFile)
 	if err != nil {
-		return // first run — use defaults
+		return
 	}
 	if err := json.Unmarshal(data, &store); err != nil {
 		log.Printf("loadState: corrupt state.json, using defaults: %v", err)
@@ -182,8 +189,6 @@ func loadState() {
 	sanitiseSettings(&store.Settings)
 }
 
-// persistState must be called with mu write-locked. Disk I/O inside the lock
-// is acceptable for this single-user localhost app (sub-ms on any local FS).
 func persistState() {
 	data, err := json.MarshalIndent(store, "", "  ")
 	if err != nil {
@@ -197,11 +202,11 @@ func persistState() {
 	}
 	if err := os.Rename(tmp, stateFile); err != nil {
 		log.Printf("persistState rename: %v", err)
-		os.Remove(tmp) // clean up orphaned temp file
+		os.Remove(tmp)
 	}
 }
 
-// ---- Response helpers -------------------------------------------------------
+// ---- Response helpers (desktop mode) ----------------------------------------
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -213,7 +218,7 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-// ---- CORS middleware --------------------------------------------------------
+// ---- Desktop-mode CORS middleware -------------------------------------------
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +236,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// ---- Task handlers ----------------------------------------------------------
+// ---- Desktop-mode task handlers ---------------------------------------------
 
 func listTasks(w http.ResponseWriter, r *http.Request) {
 	mu.RLock()
@@ -343,11 +348,9 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.Completed != nil {
 			if *req.Completed && !store.Tasks[i].Completed {
-				// Task is being marked complete — record timestamp
 				now := time.Now().Local()
 				store.Tasks[i].CompletedAt = &now
 			} else if !*req.Completed {
-				// Task is being un-completed — clear timestamp
 				store.Tasks[i].CompletedAt = nil
 			}
 			store.Tasks[i].Completed = *req.Completed
@@ -393,6 +396,9 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 	persistState()
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ---- Desktop-mode settings handlers -----------------------------------------
+
 func getSettings(w http.ResponseWriter, r *http.Request) {
 	mu.RLock()
 	s := store.Settings
@@ -420,6 +426,8 @@ func putSettings(w http.ResponseWriter, r *http.Request) {
 	mu.Unlock()
 	writeJSON(w, http.StatusOK, s)
 }
+
+// ---- Desktop-mode session handlers ------------------------------------------
 
 func getSession(w http.ResponseWriter, r *http.Request) {
 	mu.RLock()
@@ -449,7 +457,6 @@ func startSession(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().Local()
 	mu.Lock()
-	// If currently running, bank elapsed time into TotalElapsed before resetting
 	if store.Session.Status == "running" && store.Session.StartedAt != nil {
 		store.Session.TotalElapsed += time.Since(*store.Session.StartedAt).Seconds()
 	}
@@ -516,6 +523,8 @@ func updateTotals(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sess)
 }
 
+// ---- Desktop-mode stats handlers --------------------------------------------
+
 func getEstimationStats(w http.ResponseWriter, r *http.Request) {
 	mu.RLock()
 	tasks := make([]Task, len(store.Tasks))
@@ -577,7 +586,7 @@ func getCompletions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, counts)
 }
 
-// ---- Note handlers ----------------------------------------------------------
+// ---- Desktop-mode note handlers ---------------------------------------------
 
 var dateRe = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`)
 
@@ -619,23 +628,10 @@ func upsertNote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"date": date, "text": body.Text})
 }
 
-// ---- Main -------------------------------------------------------------------
+// ---- Route registration helpers ---------------------------------------------
 
-func main() {
-	exe, err := os.Executable()
-	if err != nil {
-		log.Fatalf("os.Executable: %v", err)
-	}
-	dataDir  = filepath.Join(filepath.Dir(exe), "data")
-	stateFile = filepath.Join(dataDir, "state.json")
-
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		log.Fatalf("create data dir: %v", err)
-	}
-	loadState()
-
-	mux := http.NewServeMux()
-
+// registerDesktopRoutes adds all API routes using the in-memory JSON store.
+func registerDesktopRoutes(mux *http.ServeMux) {
 	// Task routes
 	mux.HandleFunc("GET /api/tasks", listTasks)
 	mux.HandleFunc("POST /api/tasks", createTask)
@@ -652,6 +648,8 @@ func main() {
 	mux.HandleFunc("POST /api/session/pause", pauseSession)
 	mux.HandleFunc("POST /api/session/stop", stopSession)
 	mux.HandleFunc("PUT /api/session/totals", updateTotals)
+
+	// Stats routes
 	mux.HandleFunc("GET /api/stats/completions", getCompletions)
 	mux.HandleFunc("GET /api/stats/estimation", getEstimationStats)
 
@@ -666,6 +664,165 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+}
+
+// ---- Main -------------------------------------------------------------------
+
+func main() {
+	desktopMode := flag.Bool("desktop", false, "Run in desktop mode (JSON file, no auth, WebView2 window)")
+	portFlag := flag.String("port", "", "Port for web mode (overrides PORT env var)")
+	flag.Parse()
+
+	if *desktopMode {
+		runDesktopMode()
+	} else {
+		runWebMode(*portFlag)
+	}
+}
+
+// runWebMode starts the PostgreSQL-backed, OAuth-authenticated web server.
+func runWebMode(portOverride string) {
+	logger := slog.Default()
+
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("failed to load config", "error", err)
+		os.Exit(1)
+	}
+	if portOverride != "" {
+		cfg.Port = portOverride
+	}
+
+	// Connect to PostgreSQL.
+	pool, err := db.Connect(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("database connected")
+
+	// Run migrations.
+	if err := db.RunMigrations(pool); err != nil {
+		logger.Error("failed to run migrations", "error", err)
+		os.Exit(1)
+	}
+
+	// Create repositories.
+	userRepo := db.NewUserRepo(pool)
+	taskRepo := db.NewTaskRepo(pool)
+	settingsRepo := db.NewSettingsRepo(pool)
+	sessionRepo := db.NewSessionRepo(pool)
+	noteRepo := db.NewNoteRepo(pool)
+	tokenRepo := db.NewTokenRepo(pool)
+
+	// Create auth handler.
+	googleOAuth := auth.NewGoogleOAuthConfig(cfg)
+	gitHubOAuth := auth.NewGitHubOAuthConfig(cfg)
+	authHandler := auth.NewAuthHandler(googleOAuth, gitHubOAuth, cfg.JWTSecret, cfg.BaseURL, cfg.Env, userRepo, tokenRepo)
+
+	// Create data handlers.
+	taskHandler := handlers.NewTaskHandler(taskRepo)
+	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
+	sessionHandler := handlers.NewSessionHandler(sessionRepo)
+	noteHandler := handlers.NewNoteHandler(noteRepo)
+	healthHandler := handlers.NewHealthHandler(pool)
+
+	// Auth middleware.
+	requireAuth := auth.RequireAuth(cfg.JWTSecret)
+
+	mux := http.NewServeMux()
+
+	// Health endpoint (no auth required).
+	mux.HandleFunc("GET /health", healthHandler.Check)
+
+	// Auth routes (no auth middleware needed).
+	auth.RegisterRoutes(mux, authHandler)
+
+	// Protected API routes.
+	mux.Handle("GET /api/tasks", requireAuth(http.HandlerFunc(taskHandler.List)))
+	mux.Handle("POST /api/tasks", requireAuth(http.HandlerFunc(taskHandler.Create)))
+	mux.Handle("PUT /api/tasks/{id}", requireAuth(http.HandlerFunc(taskHandler.Update)))
+	mux.Handle("DELETE /api/tasks/{id}", requireAuth(http.HandlerFunc(taskHandler.Delete)))
+
+	mux.Handle("GET /api/settings", requireAuth(http.HandlerFunc(settingsHandler.Get)))
+	mux.Handle("PUT /api/settings", requireAuth(http.HandlerFunc(settingsHandler.Put)))
+
+	mux.Handle("GET /api/session", requireAuth(http.HandlerFunc(sessionHandler.Get)))
+	mux.Handle("POST /api/session/start", requireAuth(http.HandlerFunc(sessionHandler.Start)))
+	mux.Handle("POST /api/session/pause", requireAuth(http.HandlerFunc(sessionHandler.Pause)))
+	mux.Handle("POST /api/session/stop", requireAuth(http.HandlerFunc(sessionHandler.Stop)))
+	mux.Handle("PUT /api/session/totals", requireAuth(http.HandlerFunc(sessionHandler.UpdateTotals)))
+
+	mux.Handle("GET /api/stats/completions", requireAuth(http.HandlerFunc(taskHandler.Completions)))
+	mux.Handle("GET /api/stats/estimation", requireAuth(http.HandlerFunc(taskHandler.Estimation)))
+
+	mux.Handle("GET /api/notes/{date}", requireAuth(http.HandlerFunc(noteHandler.Get)))
+	mux.Handle("PUT /api/notes/{date}", requireAuth(http.HandlerFunc(noteHandler.Upsert)))
+
+	// Static files.
+	subFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		logger.Error("failed to create sub FS for static files", "error", err)
+		os.Exit(1)
+	}
+	mux.Handle("/", http.FileServer(http.FS(subFS)))
+
+	// Middleware stack: SecurityHeaders → RateLimit → CORS → CSRF → routes
+	secureCookie := cfg.Env == "production"
+	csrfMiddleware := middleware.CSRFProtect(secureCookie)
+	corsMiddleware := middleware.CORS([]string{cfg.BaseURL})
+	rateLimitMiddleware := middleware.RateLimit(cfg.RateLimit, cfg.RateBurst)
+	securityHeaders := middleware.SecurityHeaders()
+	handler := middleware.Logging(securityHeaders(rateLimitMiddleware(corsMiddleware(csrfMiddleware(mux)))))
+
+	addr := ":" + cfg.Port
+	server := &http.Server{
+		Addr:    addr,
+		Handler: handler,
+	}
+
+	// Graceful shutdown: listen for SIGINT/SIGTERM.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Info("web server starting", "port", cfg.Port, "env", cfg.Env)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-quit
+	logger.Info("graceful shutdown initiated")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Error("server shutdown error", "error", err)
+	}
+
+	pool.Close()
+	logger.Info("graceful shutdown completed")
+}
+
+// runDesktopMode starts the original JSON-backed desktop app with WebView2.
+func runDesktopMode() {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatalf("os.Executable: %v", err)
+	}
+	dataDir = filepath.Join(filepath.Dir(exe), "data")
+	stateFile = filepath.Join(dataDir, "state.json")
+
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Fatalf("create data dir: %v", err)
+	}
+	loadState()
+
+	mux := http.NewServeMux()
+	registerDesktopRoutes(mux)
 
 	// Static files (catch-all)
 	subFS, err := fs.Sub(staticFiles, "static")
@@ -686,7 +843,7 @@ func main() {
 	ready := make(chan struct{})
 	go func() {
 		close(ready)
-		log.Printf("Listening on %s", url)
+		log.Printf("Desktop mode: listening on %s", url)
 		if err := http.Serve(ln, corsMiddleware(mux)); err != nil {
 			log.Printf("server: %v", err)
 		}
@@ -705,16 +862,14 @@ func main() {
 	})
 	defer w.Destroy()
 
-	// Get the native window handle
 	hwnd := uintptr(w.Window())
 
-	// Load SetWindowPos from user32
 	user32 := syscall.NewLazyDLL("user32.dll")
 	setWindowPos := user32.NewProc("SetWindowPos")
 
 	const (
-		hwndTopmost    = ^uintptr(0)     // (HWND)-1
-		hwndNotTopmost = ^uintptr(0) - 1 // (HWND)-2
+		hwndTopmost    = ^uintptr(0)
+		hwndNotTopmost = ^uintptr(0) - 1
 		swpNoMove      = 0x0002
 		swpNoSize      = 0x0001
 	)
@@ -730,13 +885,12 @@ func main() {
 		return nil
 	})
 
-	// Title-bar theming via DWM (Windows 11+).
 	dwmapi := syscall.NewLazyDLL("dwmapi.dll")
 	dwmSetAttr := dwmapi.NewProc("DwmSetWindowAttribute")
 
 	type titleBarReq struct {
 		IsDark bool   `json:"isDark"`
-		Bg     string `json:"bg"` // "#rrggbb"
+		Bg     string `json:"bg"`
 	}
 	w.Bind("goSetTitleBar", func(req titleBarReq) error {
 		bg := hexToCOLORREF(req.Bg)
@@ -744,15 +898,12 @@ func main() {
 		if req.IsDark {
 			dark = 1
 		}
-		textColor := uint32(0x00DDDDDD) // light text for dark themes
+		textColor := uint32(0x00DDDDDD)
 		if !req.IsDark {
-			textColor = 0x00222222 // dark text for light themes
+			textColor = 0x00222222
 		}
-		// DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (controls caption button icon colour)
 		dwmSetAttr.Call(hwnd, 20, uintptr(unsafe.Pointer(&dark)), 4)
-		// DWMWA_CAPTION_COLOR = 35
 		dwmSetAttr.Call(hwnd, 35, uintptr(unsafe.Pointer(&bg)), 4)
-		// DWMWA_TEXT_COLOR = 36
 		dwmSetAttr.Call(hwnd, 36, uintptr(unsafe.Pointer(&textColor)), 4)
 		return nil
 	})
@@ -772,7 +923,7 @@ $x.GetElementsByTagName('text')[1].AppendChild($x.CreateTextNode('%s'))|Out-Null
   [Windows.UI.Notifications.ToastNotification]::new($x))
 `, req.Title, req.Message)
 		cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
-		cmd.Start() // fire-and-forget, don't wait
+		cmd.Start()
 		return nil
 	})
 

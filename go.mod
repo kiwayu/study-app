@@ -1,9 +1,24 @@
 module studysession
 
-go 1.22
+go 1.25.0
 
 require (
-	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
+	github.com/joho/godotenv v1.5.1
+	golang.org/x/crypto v0.49.0
+	golang.org/x/oauth2 v0.36.0
+	golang.org/x/time v0.15.0
+)
+
+require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
-	golang.org/x/sys v0.0.0-20210218145245-beda7e5e158e // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )

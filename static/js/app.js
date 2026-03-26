@@ -7,6 +7,7 @@ import { initTheme, buildThemePicker } from './theme.js';
 import { initDesktop } from './desktop.js';
 import { initRuler } from './ruler.js';
 import { NotesPanel } from './notes.js';
+import { checkAuth, showLoginPage, hideLoginPage, logout, renderUserProfile } from './auth.js';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -306,6 +307,21 @@ settings.onsave = s => {
 async function init() {
   initTheme();
   initDesktop();
+
+  // ── Auth gate ──────────────────────────────────────────────
+  const user = await checkAuth();
+  if (!user) {
+    showLoginPage();
+    return;
+  }
+  hideLoginPage();
+  renderUserProfile(user);
+
+  // Wire up logout button
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+  // ── Load app data ──────────────────────────────────────────
   initRuler();
   notesPanel.init();
   buildThemePicker(document.getElementById('theme-grid'));
