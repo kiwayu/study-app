@@ -7,7 +7,7 @@ const providers: { id: Provider; label: string; icon: string }[] = [
   {
     id: 'google',
     label: 'Continue with Google',
-    icon: 'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 10.25h-4v4h-1.5v-4h-4v-1.5h4v-4H12.5v4h4v1.5z',
+    icon: 'M21.35 11.1H12.18V13.83H18.69C18.36 17.64 15.19 19.27 12.19 19.27C8.36 19.27 5 16.28 5 12C5 7.73 8.54 4.73 12.19 4.73C15.19 4.73 17.08 6.7 17.08 6.7L19 4.72C19 4.72 16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12C2.03 17.05 6.16 22 12.19 22C17.6 22 21.5 18.33 21.5 12.33C21.5 11.76 21.35 11.1 21.35 11.1V11.1Z',
   },
   {
     id: 'github',
@@ -25,12 +25,15 @@ export default function LoginPage() {
   const supabase = createClient()
 
   async function signInWith(provider: Provider) {
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
+    if (error) {
+      console.error('OAuth sign-in error:', error.message)
+    }
   }
 
   return (
@@ -53,7 +56,7 @@ export default function LoginPage() {
             onClick={() => signInWith(p.id)}
             className="w-full flex items-center justify-center gap-3 rounded-full bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-zinc-100 text-sm font-medium py-3 px-4 transition-colors duration-150"
           >
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current flex-shrink-0">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current flex-shrink-0" aria-hidden="true" focusable="false">
               <path d={p.icon} />
             </svg>
             {p.label}
