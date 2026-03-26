@@ -157,11 +157,12 @@ export function useTimer(
   const sync = useCallback((session: Session) => {
     if (session.status !== 'running') return
     const serverElapsed = session.banked_ms + (Date.now() - new Date(session.started_at!).getTime())
-    bankedMsRef.current    = Math.max(0, serverElapsed)
-    rafStartTimeRef.current = performance.now()
-    segIndexRef.current     = session.segment_index
-    pomCountRef.current     = session.pomodoro_count
-  }, [])
+    bankedMsRef.current          = Math.max(0, serverElapsed)
+    rafStartTimeRef.current      = performance.now()
+    segIndexRef.current          = session.segment_index
+    pomCountRef.current          = session.pomodoro_count
+    segmentDurationMsRef.current = durationMs(session.segment_type, settings)
+  }, [settings])
 
   const getCurrentElapsedMs = useCallback(() => {
     if (rafIdRef.current) {
