@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"embed"
 	"encoding/json"
@@ -8,10 +9,12 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -679,9 +682,12 @@ func main() {
 
 // runWebMode starts the PostgreSQL-backed, OAuth-authenticated web server.
 func runWebMode(portOverride string) {
+	logger := slog.Default()
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		logger.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 	if portOverride != "" {
 		cfg.Port = portOverride
@@ -690,13 +696,15 @@ func runWebMode(portOverride string) {
 	// Connect to PostgreSQL.
 	pool, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("connect to database: %v", err)
+		logger.Error("failed to connect to database", "error", err)
+		os.Exit(1)
 	}
-	defer pool.Close()
+	logger.Info("database connected")
 
 	// Run migrations.
 	if err := db.RunMigrations(pool); err != nil {
-		log.Fatalf("run migrations: %v", err)
+		logger.Error("failed to run migrations", "error", err)
+		os.Exit(1)
 	}
 
 	// Create repositories.
@@ -717,11 +725,15 @@ func runWebMode(portOverride string) {
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 	sessionHandler := handlers.NewSessionHandler(sessionRepo)
 	noteHandler := handlers.NewNoteHandler(noteRepo)
+	healthHandler := handlers.NewHealthHandler(pool)
 
 	// Auth middleware.
 	requireAuth := auth.RequireAuth(cfg.JWTSecret)
 
 	mux := http.NewServeMux()
+
+	// Health endpoint (no auth required).
+	mux.HandleFunc("GET /health", healthHandler.Check)
 
 	// Auth routes (no auth middleware needed).
 	auth.RegisterRoutes(mux, authHandler)
@@ -750,7 +762,8 @@ func runWebMode(portOverride string) {
 	// Static files.
 	subFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
-		log.Fatalf("sub static FS: %v", err)
+		logger.Error("failed to create sub FS for static files", "error", err)
+		os.Exit(1)
 	}
 	mux.Handle("/", http.FileServer(http.FS(subFS)))
 
@@ -763,10 +776,35 @@ func runWebMode(portOverride string) {
 	handler := middleware.Logging(securityHeaders(rateLimitMiddleware(corsMiddleware(csrfMiddleware(mux)))))
 
 	addr := ":" + cfg.Port
-	log.Printf("Web mode: listening on %s", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
-		log.Fatalf("server: %v", err)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: handler,
 	}
+
+	// Graceful shutdown: listen for SIGINT/SIGTERM.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		logger.Info("web server starting", "port", cfg.Port, "env", cfg.Env)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-quit
+	logger.Info("graceful shutdown initiated")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Error("server shutdown error", "error", err)
+	}
+
+	pool.Close()
+	logger.Info("graceful shutdown completed")
 }
 
 // runDesktopMode starts the original JSON-backed desktop app with WebView2.
