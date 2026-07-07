@@ -10,7 +10,7 @@ data/
 .vscode/
 *.swp
 
-# Claude settings
+# local tooling
 .claude/
 docs/
 
