@@ -1,4 +1,4 @@
-# Study Session — Pomodoro Manager
+# Study Session: Pomodoro Manager
 
 A Pomodoro timer and task manager built with Go and vanilla JavaScript. Runs as a multi-user web app (PostgreSQL + OAuth) or a single-user desktop app (WebView2).
 
@@ -19,7 +19,7 @@ Or with Docker:
 docker-compose up       # app + PostgreSQL
 ```
 
-Open [http://localhost:8080](http://localhost:8080) — sign in with Google or GitHub.
+Open [http://localhost:8080](http://localhost:8080) and sign in with Google or GitHub.
 
 ### Desktop Mode
 
@@ -42,14 +42,14 @@ go run . --desktop      # opens a 393×852 WebView2 window
 ## Architecture
 
 ```
-main.go              # Entry point — web or desktop mode
+main.go              # Entry point (web or desktop mode)
 config/              # Environment-based configuration
 models/              # Data structures (User, Task, Settings, Session, Note)
 db/                  # PostgreSQL connection, migrations, repositories
 auth/                # OAuth2 flows, JWT, auth middleware
 handlers/            # HTTP handlers (tasks, settings, session, notes, stats, health)
 middleware/          # CORS, CSRF, rate limiting, security headers, logging
-static/              # Frontend — vanilla JS (ES6 modules), CSS, HTML
+static/              # Frontend: vanilla JS (ES6 modules), CSS, HTML
 ```
 
 ## API
@@ -91,10 +91,10 @@ See [`.env.example`](.env.example) for all environment variables. Key settings:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | — | PostgreSQL connection string |
-| `GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
-| `GITHUB_CLIENT_ID` | — | GitHub OAuth client ID |
-| `JWT_SECRET` | — | Secret for signing JWTs |
+| `DATABASE_URL` | required | PostgreSQL connection string |
+| `GOOGLE_CLIENT_ID` | required | Google OAuth client ID |
+| `GITHUB_CLIENT_ID` | required | GitHub OAuth client ID |
+| `JWT_SECRET` | required | Secret for signing JWTs |
 | `PORT` | `8080` | Server port |
 | `ENV` | `development` | `production` enforces required vars and secure cookies |
 
