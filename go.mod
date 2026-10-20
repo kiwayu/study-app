@@ -7,7 +7,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
 	github.com/joho/godotenv v1.5.1
-	golang.org/x/crypto v0.49.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/time v0.15.0
 )
@@ -19,6 +19,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 )
