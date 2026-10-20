@@ -21,7 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	webview "github.com/jchv/go-webview2"
 
 	"studysession/auth"
 	"studysession/config"
