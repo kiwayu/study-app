@@ -1,4 +1,5 @@
 # Study Session: Pomodoro Manager
+n[![CI](https://github.com/kiwayu/study-app/actions/workflows/ci.yml/badge.svg)](https://github.com/kiwayu/study-app/actions/workflows/ci.yml)
 
 A Pomodoro timer and task manager built with Go and vanilla JavaScript. Runs as a multi-user web app (PostgreSQL + OAuth) or a single-user desktop app (WebView2).
 
